@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BoomClub - Michel Abboud</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+        <h2>BoomClub</h2>
+        <p>Dashboard</p>
+      </div>
+
+      <nav class="sidebar-menu">
+        <button class="sidebar-btn active" data-page="filterMonthPage">
+          Filter by Month
+        </button>
+        <button class="sidebar-btn" data-page="historyHomePage">
+          History
+        </button>
+      </nav>
+    </aside>
+
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <main class="main-content">
+      <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Open menu">
+  ☰
+</button>
+      <!-- FILTER BY MONTH PAGE -->
+      <section id="filterMonthPage" class="page active-page">
+        <div class="container">
+<div class="filter-header">
+  <div>
+    <h1>BoomClub Birthday Filter</h1>
+    <p>Upload an Excel file and group users by birth month.</p>
+  </div>
+
+  <button id="clearPageBtn" class="clear-page-btn">
+    Reset Page
+  </button>
+</div>
+
+          <input type="file" id="fileInput" accept=".xlsx, .xls" multiple />
+          <div id="selectedFileContainer"></div>
+
+          <button id="processBtn">Process File</button>
+
+          <div id="output"></div>
+        </div>
+      </section>
+
+      <!-- HISTORY HOME PAGE -->
+      <section id="historyHomePage" class="page">
+        <div class="container">
+          <h1>History</h1>
+          <p>Select which history section you want to open.</p>
+
+
+
+          <div class="history-choice-grid">
+            <button class="history-choice-btn" id="openHistoryMonthBtn">
+              Filter by Month
+            </button>
+
+            <button class="history-choice-btn" id="openHistoryDateBtn">
+              Filter by Date
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- HISTORY FILTER BY MONTH PAGE -->
+<section id="historyMonthPage" class="page">
+  <div class="container">
+    <button class="back-btn" id="backToHistoryFromMonth">
+      ← Back
+    </button>
+
+<div class="history-header">
+  <div>
+    <h1>History - Filter by Month</h1>
+    <p>Previously processed monthly Excel results.</p>
+  </div>
+
+  <button id="clearHistoryBtn" class="clear-history-btn">
+    Clear History
+  </button>
+</div>
+
+    <div id="historyMonthContent"></div>
+  </div>
+</section>
+
+      <!-- HISTORY FILTER BY DATE PAGE -->
+      <section id="historyDatePage" class="page">
+        <div class="container">
+          <button class="back-btn" id="backToHistoryFromDate">
+            ← Back
+          </button>
+
+          <h1>History - Filter by Date</h1>
+          <p>This section is ready for the future date-based system.</p>
+
+          <div id="historyDateContent">
+            <div class="empty-state">
+              <strong>No date-based history yet.</strong>
+              <p>When you add the filter-by-date feature later, its history will appear here.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
