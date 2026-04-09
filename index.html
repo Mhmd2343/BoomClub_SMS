@@ -116,6 +116,27 @@
     </main>
   </div>
 
+  <div id="filePreviewModal" class="file-preview-modal">
+  <div class="file-preview-backdrop" id="filePreviewBackdrop"></div>
+
+  <div class="file-preview-dialog">
+    <div class="file-preview-header">
+      <div>
+        <h2 id="filePreviewTitle">File Preview</h2>
+        <p id="filePreviewSubtitle">Selected Excel file</p>
+      </div>
+
+      <button id="closeFilePreviewBtn" class="close-preview-btn" type="button">
+        ✕
+      </button>
+    </div>
+
+    <div id="filePreviewBody" class="file-preview-body">
+      <p>No preview available.</p>
+    </div>
+  </div>
+</div>
+
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="script.js"></script>
 </body>

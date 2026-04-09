@@ -6,9 +6,17 @@ const HISTORY_STORAGE_KEY = "boomclub_history";
 const sidebar = document.getElementById("sidebar");
 const mobileMenuToggle = document.getElementById("mobileMenuToggle");
 const sidebarOverlay = document.getElementById("sidebarOverlay");
+const filePreviewModal = document.getElementById("filePreviewModal");
+const filePreviewBackdrop = document.getElementById("filePreviewBackdrop");
+const closeFilePreviewBtn = document.getElementById("closeFilePreviewBtn");
+const filePreviewTitle = document.getElementById("filePreviewTitle");
+const filePreviewSubtitle = document.getElementById("filePreviewSubtitle");
+const filePreviewBody = document.getElementById("filePreviewBody");
 
 document.getElementById("processBtn").addEventListener("click", handleFile);
 document.getElementById("fileInput").addEventListener("change", showSelectedFile);
+filePreviewBackdrop.addEventListener("click", closeFilePreview);
+closeFilePreviewBtn.addEventListener("click", closeFilePreview);
 
 document.querySelectorAll(".sidebar-btn").forEach(button => {
   button.addEventListener("click", () => {
@@ -119,6 +127,15 @@ function renderSelectedFiles(container) {
     fileName.className = "file-name";
     fileName.textContent = file.name;
 
+    fileRow.addEventListener("click", () => {
+  openFilePreview(file);
+});
+
+fileName.addEventListener("click", (event) => {
+  event.stopPropagation();
+  openFilePreview(file);
+});
+
     const removeBtn = document.createElement("button");
     removeBtn.className = "remove-file-btn";
     removeBtn.type = "button";
@@ -128,17 +145,19 @@ function renderSelectedFiles(container) {
       </svg>
     `;
 
-    removeBtn.addEventListener("click", () => {
-      const confirmed = confirm(`Are you sure you want to remove the file "${file.name}"?`);
-      if (!confirmed) return;
+removeBtn.addEventListener("click", (event) => {
+  event.stopPropagation();
 
-      selectedFiles.splice(index, 1);
-      renderSelectedFiles(container);
+  const confirmed = confirm(`Are you sure you want to remove the file "${file.name}"?`);
+  if (!confirmed) return;
 
-      document.getElementById("output").innerHTML = "";
-      latestGroupedByMonth = null;
-      latestFileName = "";
-    });
+  selectedFiles.splice(index, 1);
+  renderSelectedFiles(container);
+
+  document.getElementById("output").innerHTML = "";
+  latestGroupedByMonth = null;
+  latestFileName = "";
+});
 
     fileRow.appendChild(fileName);
     fileRow.appendChild(removeBtn);
@@ -260,6 +279,124 @@ async function handleFile() {
     output.innerHTML = "<p>Something went wrong while processing the uploaded files.</p>";
   }
 }
+
+
+async function openFilePreview(file) {
+  if (!file) return;
+
+  filePreviewTitle.textContent = file.name;
+  filePreviewSubtitle.textContent = "Excel file preview";
+  filePreviewBody.innerHTML = "<p>Loading preview...</p>";
+  filePreviewModal.classList.add("open");
+
+  try {
+    const data = await readFileAsArrayBuffer(file);
+    const workbook = XLSX.read(data, { type: "array" });
+
+    filePreviewBody.innerHTML = "";
+
+    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+      filePreviewBody.innerHTML = `
+        <div class="preview-empty">
+          <strong>No sheets found in this file.</strong>
+        </div>
+      `;
+      return;
+    }
+
+    workbook.SheetNames.forEach(sheetName => {
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      const block = document.createElement("div");
+      block.className = "preview-sheet-block";
+
+      const title = document.createElement("h3");
+      title.className = "preview-sheet-title";
+      title.textContent = sheetName;
+      block.appendChild(title);
+
+      if (!rows.length) {
+        const empty = document.createElement("div");
+        empty.className = "preview-empty";
+        empty.textContent = "This sheet is empty.";
+        block.appendChild(empty);
+        filePreviewBody.appendChild(block);
+        return;
+      }
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "preview-table-wrapper";
+
+      const table = document.createElement("table");
+      table.className = "preview-table";
+
+      const thead = document.createElement("thead");
+      const tbody = document.createElement("tbody");
+
+      const headerRow = rows[0] || [];
+      const bodyRows = rows.slice(1, 16); // first 15 rows for preview
+
+      const headTr = document.createElement("tr");
+      headerRow.forEach(cell => {
+        const th = document.createElement("th");
+        th.textContent = cell ?? "";
+        headTr.appendChild(th);
+      });
+      thead.appendChild(headTr);
+
+      bodyRows.forEach(row => {
+        const tr = document.createElement("tr");
+
+        const totalColumns = Math.max(headerRow.length, row.length);
+        for (let i = 0; i < totalColumns; i++) {
+          const td = document.createElement("td");
+          td.textContent = row[i] ?? "";
+          tr.appendChild(td);
+        }
+
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      wrapper.appendChild(table);
+      block.appendChild(wrapper);
+      filePreviewBody.appendChild(block);
+    });
+  } catch (error) {
+    console.error("Preview failed:", error);
+    filePreviewBody.innerHTML = `
+      <div class="preview-empty">
+        <strong>Could not preview this file.</strong>
+        <p>Please make sure it is a valid Excel file.</p>
+      </div>
+    `;
+  }
+}
+
+
+function saveMonthHistory({ fileName, groupedByMonth }) {
+  const history = getHistory();
+
+  const historyItem = {
+    id: generateId(),
+    type: "filterByMonth",
+    fileName,
+    groupedByMonth,
+    createdAt: new Date().toISOString()
+  };
+
+  history.unshift(historyItem);
+
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+}
+
+function closeFilePreview() {
+  filePreviewModal.classList.remove("open");
+  filePreviewBody.innerHTML = "";
+}
+
 
 function readFileAsArrayBuffer(file) {
   return new Promise((resolve, reject) => {
