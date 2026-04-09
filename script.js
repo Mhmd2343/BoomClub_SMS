@@ -198,6 +198,48 @@ function buildProducedFileName(groupedByMonth) {
 }
 
 
+function normalizeValue(value) {
+  if (value === undefined || value === null) return "";
+  return String(value).trim();
+}
+
+function getRequiredFieldValues(person) {
+  return {
+    name: normalizeValue(person["Name"] || person["name"]),
+    dob: normalizeValue(
+      person["date of Birth"] ||
+      person["Date of Birth"] ||
+      person["DOB"] ||
+      person["date of birth"] ||
+      person["Dob"] ||
+      person["dob"]
+    ),
+    phone: normalizeValue(
+      person["Phone number"] ||
+      person["Phone Number"] ||
+      person["Phone num"] ||
+      person["Phone"] ||
+      person["phone"]
+    ),
+    address: normalizeValue(
+      person["Address"] ||
+      person["address"]
+    )
+  };
+}
+
+function isPersonNotSpecified(person) {
+  const fields = getRequiredFieldValues(person);
+
+  return (
+    fields.name === "" ||
+    fields.dob === "" ||
+    fields.phone === "" ||
+    fields.address === ""
+  );
+}
+
+
 async function handleFile() {
   const output = document.getElementById("output");
 
@@ -241,45 +283,53 @@ async function handleFile() {
       December: []
     };
 
-    allData.forEach(person => {
-      const dob =
-        person["date of Birth"] ||
-        person["Date of Birth"] ||
-        person["DOB"] ||
-        person["date of birth"];
+const notSpecifiedPeople = [];
+    const headers = collectHeaders(allData);
 
-      const birthDate = parseDOB(dob);
+allData.forEach(person => {
+  if (isPersonNotSpecified(person)) {
+    notSpecifiedPeople.push(person);
+    return;
+  }
 
-      if (!birthDate) {
-        console.log("Invalid DOB skipped:", dob, person);
-        return;
-      }
+  const dob = getDobValue(person);
+  const birthDate = parseDOB(dob);
 
-      const monthName = getMonthName(birthDate.getMonth());
+  if (!birthDate) {
+    console.log("Invalid DOB skipped:", dob, person);
+    return;
+  }
 
-      const normalizedPerson = {
-        ...person,
-        "date of Birth": formatDateDDMMYYYY(birthDate)
-      };
+  const monthName = getMonthName(birthDate.getMonth());
 
-      groupedByMonth[monthName].push(normalizedPerson);
-    });
+  const normalizedPerson = {
+    ...person,
+    "date of Birth": formatDateDDMMYYYY(birthDate)
+  };
 
-    latestGroupedByMonth = groupedByMonth;
+  groupedByMonth[monthName].push(normalizedPerson);
+});
 
-    saveMonthHistory({
-      fileName: latestFileName,
-      groupedByMonth: groupedByMonth
-    });
+latestGroupedByMonth = {
+  groupedByMonth,
+  notSpecifiedPeople,
+  headers
+};
 
-    displayResults(groupedByMonth, latestFileName);
+saveMonthHistory({
+  fileName: latestFileName,
+  groupedByMonth,
+  notSpecifiedPeople,
+  headers
+});
+
+displayResults(groupedByMonth, latestFileName, notSpecifiedPeople.length);
     renderMonthHistory();
   } catch (error) {
     console.error("Error processing files:", error);
     output.innerHTML = "<p>Something went wrong while processing the uploaded files.</p>";
   }
 }
-
 
 async function openFilePreview(file) {
   if (!file) return;
@@ -376,7 +426,8 @@ async function openFilePreview(file) {
 }
 
 
-function saveMonthHistory({ fileName, groupedByMonth }) {
+
+function saveMonthHistory({ fileName, groupedByMonth, notSpecifiedPeople = [], headers = [] }) {
   const history = getHistory();
 
   const historyItem = {
@@ -384,6 +435,8 @@ function saveMonthHistory({ fileName, groupedByMonth }) {
     type: "filterByMonth",
     fileName,
     groupedByMonth,
+    notSpecifiedPeople,
+    headers,
     createdAt: new Date().toISOString()
   };
 
@@ -470,7 +523,53 @@ function getMonthName(monthIndex) {
   return monthNames[monthIndex];
 }
 
-function displayResults(groupedByMonth, fileName = "") {
+
+function getDobValue(person) {
+  return (
+    person["date of Birth"] ??
+    person["Date of Birth"] ??
+    person["DOB"] ??
+    person["date of birth"] ??
+    person["Dob"] ??
+    person["dob"]
+  );
+}
+
+function isDobMissing(dob) {
+  return dob === undefined || dob === null || String(dob).trim() === "";
+}
+
+function collectHeaders(data) {
+  const headersSet = new Set();
+
+  data.forEach(row => {
+    Object.keys(row || {}).forEach(key => headersSet.add(key));
+  });
+
+  const headers = Array.from(headersSet);
+
+  if (headers.length === 0) {
+    return ["ID", "Full Name", "DOB"];
+  }
+
+  return headers;
+}
+
+function createSheetFromData(data, headers) {
+  const rows = Array.isArray(data) ? data : [];
+  const finalHeaders = Array.isArray(headers) && headers.length > 0
+    ? headers
+    : collectHeaders(rows);
+
+  if (rows.length === 0) {
+    return XLSX.utils.aoa_to_sheet([finalHeaders]);
+  }
+
+  return XLSX.utils.json_to_sheet(rows, { header: finalHeaders });
+}
+
+
+function displayResults(groupedByMonth, fileName = "", notSpecifiedCount = 0) {
   const output = document.getElementById("output");
   output.innerHTML = "<h2>Results</h2>";
 
@@ -480,16 +579,11 @@ function displayResults(groupedByMonth, fileName = "") {
     output.appendChild(fileInfo);
   }
 
-  let visibleMonthsCount = 0;
+  let totalValidBirthdays = 0;
 
   for (const month in groupedByMonth) {
     const peopleCount = groupedByMonth[month].length;
-
-    if (peopleCount === 0) {
-      continue;
-    }
-
-    visibleMonthsCount++;
+    totalValidBirthdays += peopleCount;
 
     const div = document.createElement("div");
     div.className = "month-box";
@@ -497,9 +591,14 @@ function displayResults(groupedByMonth, fileName = "") {
     output.appendChild(div);
   }
 
-  if (visibleMonthsCount === 0) {
+  const notSpecifiedDiv = document.createElement("div");
+  notSpecifiedDiv.className = "month-box";
+  notSpecifiedDiv.innerHTML = `<strong>Not Specified</strong>: ${notSpecifiedCount} ${notSpecifiedCount === 1 ? "person" : "people"}`;
+  output.appendChild(notSpecifiedDiv);
+
+  if (totalValidBirthdays === 0 && notSpecifiedCount === 0) {
     const emptyMessage = document.createElement("p");
-    emptyMessage.textContent = "No valid birthdays were found in this file.";
+    emptyMessage.textContent = "No valid birthdays or incomplete rows were found in this file.";
     output.appendChild(emptyMessage);
     return;
   }
@@ -520,17 +619,36 @@ function displayResults(groupedByMonth, fileName = "") {
   output.appendChild(downloadBtn);
 }
 
-function downloadGroupedWorkbook(groupedByMonth, customFileName = "BoomClub_Birthdays_By_Month.xlsx") {
+function downloadGroupedWorkbook(processedData, customFileName = "BoomClub_Birthdays_By_Month.xlsx") {
   const newWorkbook = XLSX.utils.book_new();
 
-  for (const month in groupedByMonth) {
-    const data = groupedByMonth[month];
+  const groupedByMonth = processedData.groupedByMonth || {};
+  const notSpecifiedPeople = processedData.notSpecifiedPeople || [];
+  const headers = processedData.headers || [];
 
-    if (data.length > 0) {
-      const sheet = XLSX.utils.json_to_sheet(data);
-      XLSX.utils.book_append_sheet(newWorkbook, sheet, month);
-    }
-  }
+  const orderedMonths = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+  ];
+
+  orderedMonths.forEach(month => {
+    const data = groupedByMonth[month] || [];
+    const sheet = createSheetFromData(data, headers);
+    XLSX.utils.book_append_sheet(newWorkbook, sheet, month);
+  });
+
+  const notSpecifiedSheet = createSheetFromData(notSpecifiedPeople, headers);
+  XLSX.utils.book_append_sheet(newWorkbook, notSpecifiedSheet, "Not Specified");
 
   XLSX.writeFile(newWorkbook, customFileName);
 }
@@ -642,8 +760,13 @@ function openHistoryItemInFilterPage(historyItem) {
   const cleanName = (historyItem.fileName || "BoomClub_File").replace(/\.[^/.]+$/, "");
   const finalName = `${cleanName}_Grouped_By_Month.xlsx`;
 
-  downloadGroupedWorkbook(historyItem.groupedByMonth, finalName);
+  downloadGroupedWorkbook({
+    groupedByMonth: historyItem.groupedByMonth,
+    notSpecifiedPeople: historyItem.notSpecifiedPeople || [],
+    headers: historyItem.headers || []
+  }, finalName);
 }
+
 document.getElementById("clearHistoryBtn").addEventListener("click", clearHistory);
 
 function clearHistory() {
