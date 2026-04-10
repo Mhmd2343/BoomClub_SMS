@@ -1,14 +1,19 @@
 import {
   clearAllHistory,
   getMonthHistory,
+  getDateHistory,
   saveEditDraft,
 } from "../storage.js";
-import { downloadGroupedWorkbook } from "../exportExcel.js";
+import {
+  downloadGroupedWorkbook,
+  downloadDateGroupedWorkbook,
+} from "../exportExcel.js";
 import { openStoredFilesPreview } from "../previewModal.js";
 import { formatFullDateTime, getMinutesAgoText } from "../utils.js";
 
 export function initHistoryPage() {
   renderMonthHistory();
+  renderDateHistory();
   bindHistoryEvents();
   showHistoryHome();
 }
@@ -93,102 +98,144 @@ function renderMonthHistory() {
   list.className = "history-list";
 
   history.forEach((item) => {
-    const card = document.createElement("div");
-    card.className = "history-file-card";
-
-    const cardMain = document.createElement("div");
-    cardMain.className = "history-card-main";
-    cardMain.addEventListener("click", () => {
-      openHistoryItemPreview(item);
-    });
-
-    const dateTimeDiv = document.createElement("div");
-    dateTimeDiv.className = "history-datetime";
-    dateTimeDiv.textContent = formatFullDateTime(item.createdAt);
-    cardMain.appendChild(dateTimeDiv);
-
-    const minutesAgoText = getMinutesAgoText(item.createdAt);
-    if (minutesAgoText) {
-      const minutesAgoDiv = document.createElement("div");
-      minutesAgoDiv.className = "history-minutes-ago";
-      minutesAgoDiv.textContent = minutesAgoText;
-      cardMain.appendChild(minutesAgoDiv);
-    }
-
-    const fileNameDiv = document.createElement("div");
-    fileNameDiv.className = "history-title";
-    fileNameDiv.textContent = item.fileName;
-    cardMain.appendChild(fileNameDiv);
-
-    const sourceFiles = Array.isArray(item.sourceFiles) ? item.sourceFiles : [];
-
-    if (sourceFiles.length > 0) {
-      const usedFilesLabel = document.createElement("div");
-      usedFilesLabel.className = "history-used-files-label";
-      usedFilesLabel.textContent = "Used files";
-      cardMain.appendChild(usedFilesLabel);
-
-      const sourceFilesWrap = document.createElement("div");
-      sourceFilesWrap.className = "history-source-files";
-
-      sourceFiles.forEach((file) => {
-        const tag = document.createElement("span");
-        tag.className = "history-source-file-tag";
-        tag.textContent = file.name || "Unnamed file";
-        sourceFilesWrap.appendChild(tag);
-      });
-
-      cardMain.appendChild(sourceFilesWrap);
-    }
-
-    const hint = document.createElement("div");
-    hint.className = "history-preview-hint";
-    hint.textContent = "Click this section to preview the original uploaded file(s).";
-    cardMain.appendChild(hint);
-
-    const actions = document.createElement("div");
-    actions.className = "history-card-actions";
-
-    const editBtn = document.createElement("button");
-    editBtn.type = "button";
-    editBtn.className = "history-action-btn history-edit-btn";
-    editBtn.textContent = "Edit";
-    editBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      openHistoryItemEdit(item);
-    });
-
-    const downloadBtn = document.createElement("button");
-    downloadBtn.type = "button";
-    downloadBtn.className = "history-action-btn history-download-btn";
-    downloadBtn.textContent = "Download XLSX File";
-    downloadBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      openHistoryItemDownload(item);
-    });
-
-    actions.appendChild(editBtn);
-    actions.appendChild(downloadBtn);
-
-    card.appendChild(cardMain);
-    card.appendChild(actions);
-    list.appendChild(card);
+    list.appendChild(createHistoryCard(item, "month"));
   });
 
   container.appendChild(list);
 }
 
+function renderDateHistory() {
+  const container = document.getElementById("historyDateContent");
+  const history = getDateHistory();
+
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (history.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <strong>No date-based history yet.</strong>
+        <p>Your processed exact-date XLSX results will appear here.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const list = document.createElement("div");
+  list.className = "history-list";
+
+  history.forEach((item) => {
+    list.appendChild(createHistoryCard(item, "date"));
+  });
+
+  container.appendChild(list);
+}
+
+function createHistoryCard(item, mode) {
+  const card = document.createElement("div");
+  card.className = "history-file-card";
+
+  const cardMain = document.createElement("div");
+  cardMain.className = "history-card-main";
+  cardMain.addEventListener("click", () => {
+    openHistoryItemPreview(item);
+  });
+
+  const dateTimeDiv = document.createElement("div");
+  dateTimeDiv.className = "history-datetime";
+  dateTimeDiv.textContent = formatFullDateTime(item.createdAt);
+  cardMain.appendChild(dateTimeDiv);
+
+  const minutesAgoText = getMinutesAgoText(item.createdAt);
+  if (minutesAgoText) {
+    const minutesAgoDiv = document.createElement("div");
+    minutesAgoDiv.className = "history-minutes-ago";
+    minutesAgoDiv.textContent = minutesAgoText;
+    cardMain.appendChild(minutesAgoDiv);
+  }
+
+  const fileNameDiv = document.createElement("div");
+  fileNameDiv.className = "history-title";
+  fileNameDiv.textContent = item.fileName;
+  cardMain.appendChild(fileNameDiv);
+
+  const sourceFiles = Array.isArray(item.sourceFiles) ? item.sourceFiles : [];
+
+  if (sourceFiles.length > 0) {
+    const usedFilesLabel = document.createElement("div");
+    usedFilesLabel.className = "history-used-files-label";
+    usedFilesLabel.textContent = "Used files";
+    cardMain.appendChild(usedFilesLabel);
+
+    const sourceFilesWrap = document.createElement("div");
+    sourceFilesWrap.className = "history-source-files";
+
+    sourceFiles.forEach((file) => {
+      const tag = document.createElement("span");
+      tag.className = "history-source-file-tag";
+      tag.textContent = file.name || "Unnamed file";
+      sourceFilesWrap.appendChild(tag);
+    });
+
+    cardMain.appendChild(sourceFilesWrap);
+  }
+
+  const hint = document.createElement("div");
+  hint.className = "history-preview-hint";
+  hint.textContent = "Click this section to preview the original uploaded file(s).";
+  cardMain.appendChild(hint);
+
+  const actions = document.createElement("div");
+  actions.className = "history-card-actions";
+
+  const editBtn = document.createElement("button");
+  editBtn.type = "button";
+  editBtn.className = "history-action-btn history-edit-btn";
+  editBtn.textContent = "Edit";
+  editBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openHistoryItemEdit(item, mode);
+  });
+
+  const downloadBtn = document.createElement("button");
+  downloadBtn.type = "button";
+  downloadBtn.className = "history-action-btn history-download-btn";
+  downloadBtn.textContent = "Download XLSX File";
+  downloadBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openHistoryItemDownload(item, mode);
+  });
+
+  actions.appendChild(editBtn);
+  actions.appendChild(downloadBtn);
+
+  card.appendChild(cardMain);
+  card.appendChild(actions);
+
+  return card;
+}
+
 function buildFallbackSourceFilesFromHistoryItem(historyItem) {
-  if (!historyItem || !historyItem.groupedByMonth) return [];
+  if (!historyItem) return [];
 
   const rows = [];
-  const groupedByMonth = historyItem.groupedByMonth || {};
 
-  Object.values(groupedByMonth).forEach((monthRows) => {
-    if (Array.isArray(monthRows)) {
-      rows.push(...monthRows);
-    }
-  });
+  if (historyItem.groupedByMonth) {
+    Object.values(historyItem.groupedByMonth).forEach((monthRows) => {
+      if (Array.isArray(monthRows)) {
+        rows.push(...monthRows);
+      }
+    });
+  }
+
+  if (historyItem.groupedByDate) {
+    Object.values(historyItem.groupedByDate).forEach((dateRows) => {
+      if (Array.isArray(dateRows)) {
+        rows.push(...dateRows);
+      }
+    });
+  }
 
   if (Array.isArray(historyItem.notSpecifiedPeople)) {
     rows.push(...historyItem.notSpecifiedPeople);
@@ -230,53 +277,81 @@ function openHistoryItemPreview(historyItem) {
 
   openStoredFilesPreview(previewFiles, historyItem.fileName || "History Preview");
 }
-function openHistoryItemDownload(historyItem) {
-  if (!historyItem || !historyItem.groupedByMonth) {
+
+function openHistoryItemDownload(historyItem, mode) {
+  if (!historyItem) {
     alert("This history file is not available.");
     return;
   }
 
   const cleanName = (historyItem.fileName || "BoomClub_File").replace(/\.[^/.]+$/, "");
-  const finalName = `${cleanName}_Grouped_By_Month.xlsx`;
 
-  downloadGroupedWorkbook(
+  if (mode === "month") {
+    if (!historyItem.groupedByMonth) {
+      alert("This month history file is not available.");
+      return;
+    }
+
+    downloadGroupedWorkbook(
+      {
+        groupedByMonth: historyItem.groupedByMonth,
+        notSpecifiedPeople: historyItem.notSpecifiedPeople || [],
+        headers: historyItem.headers || [],
+      },
+      `${cleanName}_Grouped_By_Month.xlsx`
+    );
+
+    return;
+  }
+
+  if (!historyItem.groupedByDate) {
+    alert("This date history file is not available.");
+    return;
+  }
+
+  downloadDateGroupedWorkbook(
     {
-      groupedByMonth: historyItem.groupedByMonth,
+      groupedByDate: historyItem.groupedByDate,
       notSpecifiedPeople: historyItem.notSpecifiedPeople || [],
       headers: historyItem.headers || [],
     },
-    finalName
+    `${cleanName}_Grouped_By_Date.xlsx`
   );
 }
 
-function openHistoryItemEdit(historyItem) {
+function openHistoryItemEdit(historyItem, mode) {
   if (!historyItem) {
     alert("This history file is not available.");
     return;
   }
 
   saveEditDraft(historyItem);
-  navigateToFilterByMonthPage();
+
+  if (mode === "month") {
+    navigateToPage("filter-by-month");
+    return;
+  }
+
+  navigateToPage("filter-by-date");
 }
 
-function navigateToFilterByMonthPage() {
+function navigateToPage(pageName) {
   if (typeof window.loadPage === "function") {
-    window.loadPage("filter-by-month");
+    window.loadPage(pageName);
     return;
   }
 
   if (typeof window.navigateToPage === "function") {
-    window.navigateToPage("filter-by-month");
+    window.navigateToPage(pageName);
     return;
   }
 
   const possibleTriggers = [
-    '[data-page="filter-by-month"]',
-    '[data-route="filter-by-month"]',
-    '[data-target="filter-by-month"]',
-    'a[href="#filter-by-month"]',
-    'button[href="#filter-by-month"]',
-    '#filterByMonthNavBtn',
+    `[data-page="${pageName}"]`,
+    `[data-route="${pageName}"]`,
+    `[data-target="${pageName}"]`,
+    `a[href="#${pageName}"]`,
+    `button[href="#${pageName}"]`,
   ];
 
   for (const selector of possibleTriggers) {
@@ -290,11 +365,11 @@ function navigateToFilterByMonthPage() {
 
   window.dispatchEvent(
     new CustomEvent("boomclub:open-page", {
-      detail: { page: "filter-by-month" },
+      detail: { page: pageName },
     })
   );
 
-  alert("Edit draft loaded. Open the Filter by Month page to continue.");
+  alert("Edit draft loaded. Open the target page to continue.");
 }
 
 function clearHistory() {
@@ -303,5 +378,6 @@ function clearHistory() {
 
   clearAllHistory();
   renderMonthHistory();
+  renderDateHistory();
   alert("History cleared successfully.");
 }

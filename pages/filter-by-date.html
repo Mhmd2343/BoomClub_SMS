@@ -1,18 +1,32 @@
 <section class="page-section">
   <div class="container">
-    <div class="page-header">
+    <div class="filter-header">
       <div>
-        <h1>Filter by Date</h1>
-        <p>This feature is planned for the next version of the system.</p>
+        <h1>BoomClub Birthday Filter</h1>
+        <p>Upload Excel file(s) and group users by exact birth date.</p>
       </div>
+
+      <button id="clearDatePageBtn" class="clear-page-btn" type="button">
+        Reset Page
+      </button>
     </div>
 
-    <div class="empty-state">
-      <strong>Coming soon.</strong>
-      <p>
-        This section will allow you to filter users by exact birthday date
-        instead of month only.
-      </p>
-    </div>
+    <input
+      type="file"
+      id="dateExcelInput"
+      accept=".xlsx,.xls"
+      multiple
+    />
+
+    <div id="dateSelectedFiles"></div>
+
+    <button id="processDateBtn" type="button">Process File</button>
+
+    <button id="downloadDateBtn" type="button" disabled>
+      Download XLSX File
+    </button>
+
+    <div id="dateSummaryBox"></div>
+    <div id="dateResultList"></div>
   </div>
 </section>

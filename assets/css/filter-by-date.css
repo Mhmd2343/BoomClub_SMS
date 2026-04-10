@@ -1,1 +1,181 @@
-/* Reserved for future Filter by Date styling */
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.clear-page-btn {
+  background: #FFE08A;
+  color: #A61B1B;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  height: fit-content;
+  margin-top: 5px;
+  transition: all 0.25s ease;
+}
+
+.clear-page-btn:hover {
+  background: #FFD24D;
+  transform: translateY(-1px);
+}
+
+#dateSelectedFiles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.file-row {
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #FFF3C4;
+  border: 1px solid #FFE08A;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.file-row:hover {
+  background: #FFE9A8;
+}
+
+.file-name {
+  font-size: 14px;
+  flex: 1;
+  cursor: pointer;
+}
+
+.remove-file-btn {
+  min-width: 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: #D62828;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-top: 0;
+  padding: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.remove-file-btn:hover {
+  background: #A61B1B;
+  transform: scale(1.1);
+}
+
+#processDateBtn {
+  margin-top: 20px;
+}
+
+#downloadDateBtn {
+  margin-top: 25px;
+}
+
+#dateSummaryBox {
+  margin-top: 25px;
+}
+
+.summary-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-item {
+  background: #FFF8E1;
+  border: 1px solid #FFE08A;
+  padding: 14px;
+  border-radius: 10px;
+  transition: 0.2s ease;
+}
+
+.summary-item:hover {
+  background: #FFF3C4;
+}
+
+.summary-label {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: #555;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #222;
+}
+
+#dateResultList {
+  margin-top: 30px;
+}
+
+.date-sheet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.date-sheet-item {
+  background: #FFF8E1;
+  border: 1px solid #FFE08A;
+  padding: 14px;
+  margin-bottom: 0;
+  border-radius: 10px;
+  transition: 0.2s ease;
+}
+
+.date-sheet-item:hover {
+  background: #FFF3C4;
+}
+
+.date-sheet-name {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.date-sheet-count {
+  font-size: 14px;
+}
+
+.not-specified-item {
+  background: #FFF3C4;
+}
+
+.compact-empty-state {
+  background: #FFF8E1;
+  border: 1px solid #FFE08A;
+  padding: 14px;
+  border-radius: 10px;
+}
+
+.compact-empty-state strong {
+  display: block;
+  margin-bottom: 4px;
+}
+.file-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-size-text {
+  font-size: 12px;
+  font-style: italic;
+  color: #777;
+  margin-top: 4px;
+}

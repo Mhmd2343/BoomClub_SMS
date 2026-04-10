@@ -91,3 +91,17 @@
 #downloadBtn {
   margin-top: 25px;
 }
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-size-text {
+  font-size: 12px;
+  font-style: italic;
+  color: #777;
+  margin-top: 4px;
+}

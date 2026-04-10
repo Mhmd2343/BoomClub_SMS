@@ -9,7 +9,11 @@ import {
   parseDOB,
   readFileAsArrayBuffer,
 } from "../utils.js";
-import { saveMonthHistory } from "../storage.js";
+import {
+  saveMonthHistory,
+  getEditDraft,
+  clearEditDraft,
+} from "../storage.js";
 import { downloadGroupedWorkbook } from "../exportExcel.js";
 import { openFilePreview } from "../previewModal.js";
 
@@ -34,7 +38,69 @@ export function initFilterByMonthPage() {
     clearPageBtn.addEventListener("click", clearPage);
   }
 
+  restoreEditDraftIfAvailable();
   renderSelectedFiles();
+}
+
+function isStoredSourceFile(fileItem) {
+  return (
+    fileItem &&
+    typeof fileItem === "object" &&
+    Array.isArray(fileItem.sheets) &&
+    typeof fileItem.name === "string"
+  );
+}
+
+function cloneStoredSourceFile(fileItem) {
+  return {
+    name: fileItem.name,
+    sheets: (fileItem.sheets || []).map((sheet) => ({
+      sheetName: sheet.sheetName,
+      rows: Array.isArray(sheet.rows) ? [...sheet.rows] : [],
+    })),
+  };
+}
+
+function getFileDuplicateKey(fileItem) {
+  if (isStoredSourceFile(fileItem)) {
+    return `stored::${fileItem.name}`;
+  }
+
+  return `live::${fileItem.name}::${fileItem.size}::${fileItem.lastModified}`;
+}
+
+function restoreEditDraftIfAvailable() {
+  const editDraft = getEditDraft();
+
+  if (!editDraft || editDraft.type !== "filterByMonth") {
+    return;
+  }
+
+  selectedFiles = Array.isArray(editDraft.sourceFiles)
+    ? editDraft.sourceFiles.map(cloneStoredSourceFile)
+    : [];
+
+  latestFileName = editDraft.fileName || "";
+
+  if (editDraft.groupedByMonth) {
+    latestGroupedByMonth = {
+      groupedByMonth: editDraft.groupedByMonth,
+      notSpecifiedPeople: editDraft.notSpecifiedPeople || [],
+      headers: editDraft.headers || [],
+    };
+  } else {
+    latestGroupedByMonth = null;
+  }
+
+  if (latestGroupedByMonth) {
+    displayResults(
+      latestGroupedByMonth.groupedByMonth,
+      latestFileName,
+      (latestGroupedByMonth.notSpecifiedPeople || []).length
+    );
+  }
+
+  clearEditDraft();
 }
 
 function showSelectedFile() {
@@ -43,11 +109,10 @@ function showSelectedFile() {
 
   if (newFiles.length > 0) {
     newFiles.forEach((newFile) => {
+      const newFileKey = getFileDuplicateKey(newFile);
+
       const alreadyExists = selectedFiles.some(
-        (existingFile) =>
-          existingFile.name === newFile.name &&
-          existingFile.size === newFile.size &&
-          existingFile.lastModified === newFile.lastModified
+        (existingFile) => getFileDuplicateKey(existingFile) === newFileKey
       );
 
       if (!alreadyExists) {
@@ -66,54 +131,63 @@ function renderSelectedFiles() {
 
   container.innerHTML = "";
 
-  if (selectedFiles.length === 0) return;
+  if (selectedFiles.length === 0) {
+    return;
+  }
 
   selectedFiles.forEach((file, index) => {
-    const fileRow = document.createElement("div");
-    fileRow.className = "file-row";
+    const row = document.createElement("div");
+    row.className = "file-row";
 
-    const fileName = document.createElement("span");
+    const fileInfo = document.createElement("div");
+    fileInfo.className = "file-info";
+
+    const fileName = document.createElement("div");
     fileName.className = "file-name";
-    fileName.textContent = file.name;
-
-    fileRow.addEventListener("click", () => {
-      openFilePreview(file);
+    fileName.textContent = file.name || `File ${index + 1}`;
+    fileName.title = "Click to preview this file";
+    fileName.addEventListener("click", async () => {
+      await openFilePreview(file);
     });
 
-    fileName.addEventListener("click", (event) => {
-      event.stopPropagation();
-      openFilePreview(file);
-    });
+    const fileSize = document.createElement("div");
+    fileSize.className = "file-size-text";
+    fileSize.textContent = formatFileSize(file.size || 0);
+
+    fileInfo.appendChild(fileName);
+    fileInfo.appendChild(fileSize);
 
     const removeBtn = document.createElement("button");
-    removeBtn.className = "remove-file-btn";
     removeBtn.type = "button";
-    removeBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M18 6L6 18M6 6l12 12" stroke="white" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-    `;
-
+    removeBtn.className = "remove-file-btn";
+    removeBtn.innerHTML = "✕";
+    removeBtn.title = "Remove file";
     removeBtn.addEventListener("click", (event) => {
       event.stopPropagation();
-
-      const confirmed = confirm(`Are you sure you want to remove the file "${file.name}"?`);
-      if (!confirmed) return;
-
-      selectedFiles.splice(index, 1);
-      renderSelectedFiles();
-
-      const output = document.getElementById("output");
-      if (output) output.innerHTML = "";
-
-      latestGroupedByMonth = null;
-      latestFileName = "";
+      removeSelectedFile(index);
     });
 
-    fileRow.appendChild(fileName);
-    fileRow.appendChild(removeBtn);
-    container.appendChild(fileRow);
+    row.appendChild(fileInfo);
+    row.appendChild(removeBtn);
+    container.appendChild(row);
   });
+}
+
+function removeSelectedFile(indexToRemove) {
+  const file = selectedFiles[indexToRemove];
+  if (!file) return;
+
+  const confirmed = confirm(`Are you sure you want to remove "${file.name}"?`);
+  if (!confirmed) return;
+
+  selectedFiles = selectedFiles.filter((_, index) => index !== indexToRemove);
+  renderSelectedFiles();
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 async function handleFile() {
@@ -134,16 +208,41 @@ async function handleFile() {
 
   try {
     let allData = [];
+    const sourceFiles = [];
 
     for (const file of selectedFiles) {
+      if (isStoredSourceFile(file)) {
+        sourceFiles.push(cloneStoredSourceFile(file));
+
+        file.sheets.forEach((sheet) => {
+          const rows = Array.isArray(sheet.rows) ? sheet.rows : [];
+          allData = allData.concat(rows);
+        });
+
+        continue;
+      }
+
       const data = await readFileAsArrayBuffer(file);
       const workbook = XLSX.read(data, { type: "array" });
+
+      const parsedSourceFile = {
+        name: file.name,
+        sheets: [],
+      };
 
       workbook.SheetNames.forEach((sheetName) => {
         const worksheet = workbook.Sheets[sheetName];
         const sheetData = XLSX.utils.sheet_to_json(worksheet);
+
+        parsedSourceFile.sheets.push({
+          sheetName,
+          rows: sheetData,
+        });
+
         allData = allData.concat(sheetData);
       });
+
+      sourceFiles.push(parsedSourceFile);
     }
 
     const groupedByMonth = createEmptyMonthGroups();
@@ -185,12 +284,14 @@ async function handleFile() {
       groupedByMonth,
       notSpecifiedPeople,
       headers,
+      sourceFiles,
     });
 
     displayResults(groupedByMonth, latestFileName, notSpecifiedPeople.length);
   } catch (error) {
     console.error("Error processing files:", error);
-    output.innerHTML = "<p>Something went wrong while processing the uploaded files.</p>";
+    output.innerHTML =
+      "<p>Something went wrong while processing the uploaded files.</p>";
   }
 }
 
@@ -214,18 +315,23 @@ function displayResults(groupedByMonth, fileName = "", notSpecifiedCount = 0) {
 
     const div = document.createElement("div");
     div.className = "month-box";
-    div.innerHTML = `<strong>${month}</strong>: ${peopleCount} ${peopleCount === 1 ? "person" : "people"}`;
+    div.innerHTML = `<strong>${month}</strong>: ${peopleCount} ${
+      peopleCount === 1 ? "person" : "people"
+    }`;
     output.appendChild(div);
   }
 
   const notSpecifiedDiv = document.createElement("div");
   notSpecifiedDiv.className = "month-box";
-  notSpecifiedDiv.innerHTML = `<strong>Not Specified</strong>: ${notSpecifiedCount} ${notSpecifiedCount === 1 ? "person" : "people"}`;
+  notSpecifiedDiv.innerHTML = `<strong>Not Specified</strong>: ${notSpecifiedCount} ${
+    notSpecifiedCount === 1 ? "person" : "people"
+  }`;
   output.appendChild(notSpecifiedDiv);
 
   if (totalValidBirthdays === 0 && notSpecifiedCount === 0) {
     const emptyMessage = document.createElement("p");
-    emptyMessage.textContent = "No valid birthdays or incomplete rows were found in this file.";
+    emptyMessage.textContent =
+      "No valid birthdays or incomplete rows were found in this file.";
     output.appendChild(emptyMessage);
     return;
   }
@@ -265,4 +371,6 @@ function clearPage() {
   selectedFiles = [];
   latestGroupedByMonth = null;
   latestFileName = "";
+
+  clearEditDraft();
 }

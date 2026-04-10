@@ -40,12 +40,40 @@ export function saveMonthHistory({
   localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
 }
 
+export function saveDateHistory({
+  fileName,
+  groupedByDate,
+  notSpecifiedPeople = [],
+  headers = [],
+  sourceFiles = [],
+}) {
+  const history = getHistory();
+
+  const historyItem = {
+    id: generateId(),
+    type: "filterByDate",
+    fileName,
+    groupedByDate,
+    notSpecifiedPeople,
+    headers,
+    sourceFiles,
+    createdAt: new Date().toISOString(),
+  };
+
+  history.unshift(historyItem);
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+}
+
 export function clearAllHistory() {
   localStorage.removeItem(HISTORY_STORAGE_KEY);
 }
 
 export function getMonthHistory() {
   return getHistory().filter((item) => item.type === "filterByMonth");
+}
+
+export function getDateHistory() {
+  return getHistory().filter((item) => item.type === "filterByDate");
 }
 
 export function getLatestHistoryItem() {
