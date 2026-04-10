@@ -1,0 +1,93 @@
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.clear-page-btn {
+  background: #FFE08A;
+  color: #A61B1B;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  height: fit-content;
+  margin-top: 5px;
+  transition: all 0.25s ease;
+}
+
+.clear-page-btn:hover {
+  background: #FFD24D;
+  transform: translateY(-1px);
+}
+
+#selectedFileContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.file-row {
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #FFF3C4;
+  border: 1px solid #FFE08A;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.file-row:hover {
+  background: #FFE9A8;
+}
+
+.file-name {
+  font-size: 14px;
+  flex: 1;
+  cursor: pointer;
+}
+
+.remove-file-btn {
+  min-width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #D62828;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-top: 0;
+  padding: 0;
+}
+
+.remove-file-btn:hover {
+  background: #A61B1B;
+  transform: scale(1.1);
+}
+
+#output {
+  margin-top: 30px;
+}
+
+.month-box {
+  background: #FFF8E1;
+  border: 1px solid #FFE08A;
+  padding: 14px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  transition: 0.2s ease;
+}
+
+.month-box:hover {
+  background: #FFF3C4;
+}
+
+#downloadBtn {
+  margin-top: 25px;
+}

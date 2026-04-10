@@ -1,0 +1,114 @@
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background: linear-gradient(180deg, #D62828, #A61B1B);
+  color: white;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  overflow-y: auto;
+  z-index: 1100;
+}
+
+.sidebar-brand h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.sidebar-brand p {
+  margin: 6px 0 0;
+  color: #FFD966;
+  font-size: 14px;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sidebar-btn {
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  text-align: left;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.25s ease;
+  margin-top: 0;
+}
+
+.sidebar-btn:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+.sidebar-btn.active {
+  background: #FFD966;
+  color: #A61B1B;
+  font-weight: bold;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  visibility: hidden;
+  transition: 0.25s ease;
+  z-index: 1090;
+}
+
+.sidebar-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.main-content {
+  flex: 1;
+  padding: 40px;
+  margin-left: 260px;
+}
+
+.mobile-menu-toggle {
+  display: none;
+  margin: 0 0 20px 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #D62828;
+  color: white;
+  font-size: 22px;
+  line-height: 1;
+  position: relative;
+  z-index: 1101;
+}
+
+.mobile-menu-toggle:hover {
+  background: #A61B1B;
+}
+
+.container {
+  width: 100%;
+  max-width: 900px;
+  margin: auto;
+  background: white;
+  padding: 36px;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.page-section {
+  display: block;
+}

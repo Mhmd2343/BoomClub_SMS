@@ -1,0 +1,141 @@
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 28px;
+  }
+
+  .container {
+    padding: 28px;
+  }
+
+  .dashboard-grid,
+  .dashboard-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    width: 260px;
+    height: 100vh;
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .mobile-menu-toggle {
+    display: inline-block;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .container {
+    padding: 22px;
+    border-radius: 14px;
+  }
+
+  .filter-header,
+  .history-header,
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .clear-page-btn,
+  .clear-history-btn {
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  .main-content {
+    padding: 14px;
+  }
+
+  .container {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  p {
+    font-size: 14px;
+  }
+
+  .sidebar-brand h2 {
+    font-size: 24px;
+  }
+
+  .sidebar-btn {
+    font-size: 14px;
+    padding: 12px 14px;
+  }
+
+  .history-file-card {
+    padding: 14px;
+  }
+
+  .history-title {
+    font-size: 16px;
+  }
+
+  .history-datetime,
+  .history-minutes-ago,
+  .file-name {
+    font-size: 12px;
+  }
+
+  .file-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .remove-file-btn {
+    min-width: 34px;
+    height: 34px;
+  }
+
+  button {
+    width: 100%;
+  }
+
+  #processBtn,
+  #downloadBtn,
+  .mobile-menu-toggle {
+    width: 100%;
+  }
+
+  input[type="file"] {
+    width: 100%;
+  }
+
+  .file-preview-dialog {
+    width: calc(100% - 16px);
+    margin: 16px auto;
+    max-height: 90vh;
+  }
+
+  .file-preview-header,
+  .file-preview-body {
+    padding: 16px;
+  }
+
+  .file-preview-header h2 {
+    font-size: 20px;
+  }
+}
