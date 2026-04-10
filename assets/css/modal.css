@@ -61,6 +61,24 @@
   max-height: calc(85vh - 100px);
 }
 
+.preview-file-block {
+  margin-bottom: 34px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.preview-file-block:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.preview-file-heading {
+  margin: 0 0 16px;
+  font-size: 22px;
+  color: #2B2B2B;
+}
+
 .preview-sheet-block {
   margin-bottom: 28px;
 }
@@ -75,6 +93,7 @@
   overflow: auto;
   border: 1px solid #eee;
   border-radius: 12px;
+  background: white;
 }
 
 .preview-table {
@@ -103,4 +122,14 @@
   border: 1px dashed #FFE08A;
   border-radius: 12px;
   background: #FFF8E1;
+}
+
+.preview-empty p {
+  margin: 8px 0 0;
+}
+
+.preview-note {
+  margin: 10px 6px 0;
+  font-size: 13px;
+  color: #666;
 }

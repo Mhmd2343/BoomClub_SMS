@@ -18,6 +18,54 @@
   transform: translateY(-1px);
 }
 
+.history-home-view {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.history-choice-btn {
+  width: 100%;
+  min-height: 110px;
+  border: 2px solid #FFE08A;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #FFF8E1, #FFFFFF);
+  color: #A61B1B;
+  font-size: 24px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.history-choice-btn:hover {
+  background: #FFF3C4;
+  transform: translateY(-2px);
+}
+
+.history-detail-view {
+  margin-top: 28px;
+}
+
+.history-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.back-history-btn {
+  background: #D62828;
+  color: white;
+  white-space: nowrap;
+}
+
+.back-history-btn:hover {
+  background: #A61B1B;
+  transform: translateY(-1px);
+}
+
 .history-section {
   margin-top: 28px;
 }
@@ -36,15 +84,18 @@
   border: 1px solid #FFE08A;
   border-radius: 14px;
   padding: 18px;
-  cursor: pointer;
-  transition: all 0.25s ease;
   color: #2B2B2B;
   margin-top: 0;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.05);
 }
 
-.history-file-card:hover {
+.history-card-main {
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.history-card-main:hover {
   background: #FFF8E1;
-  transform: translateY(-2px);
 }
 
 .history-datetime {
@@ -67,4 +118,80 @@
   font-size: 18px;
   font-weight: 700;
   color: #2B2B2B;
+}
+
+.history-used-files-label {
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #A61B1B;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.history-source-files {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-source-file-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #FFF3C4;
+  border: 1px solid #FFE08A;
+  font-size: 13px;
+  color: #7A1B1B;
+}
+
+.history-preview-hint {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #666;
+}
+
+.history-card-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+.history-action-btn {
+  width: auto;
+  margin-top: 0;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-weight: 700;
+}
+
+.history-edit-btn {
+  background: #D62828;
+  color: white;
+}
+
+.history-edit-btn:hover {
+  background: #A61B1B;
+  transform: translateY(-1px);
+}
+
+.history-download-btn {
+  background: #FFE08A;
+  color: #A61B1B;
+}
+
+.history-download-btn:hover {
+  background: #FFD24D;
+  transform: translateY(-1px);
+}
+
+.hidden {
+  display: none !important;
 }

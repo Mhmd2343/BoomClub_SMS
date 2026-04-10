@@ -3,7 +3,7 @@
     <div class="history-header">
       <div>
         <h1>History</h1>
-        <p>View previously processed files and exported results.</p>
+        <p>Choose which history you want to view.</p>
       </div>
 
       <button id="clearHistoryBtn" class="clear-history-btn" type="button">
@@ -11,14 +11,36 @@
       </button>
     </div>
 
-    <div class="history-section">
-      <h2>Month History</h2>
+    <div id="historyHomeView" class="history-home-view">
+      <button id="showMonthHistoryBtn" class="history-choice-btn" type="button">
+        Filter by Month
+      </button>
+
+      <button id="showDateHistoryBtn" class="history-choice-btn" type="button">
+        Filter by Date
+      </button>
+    </div>
+
+    <div id="monthHistoryView" class="history-detail-view hidden">
+      <div class="history-section-header">
+        <h2>Month History</h2>
+        <button id="backToHistoryHomeFromMonth" class="back-history-btn" type="button">
+          Back
+        </button>
+      </div>
+
       <p>Previously processed monthly Excel results.</p>
       <div id="historyMonthContent"></div>
     </div>
 
-    <div class="history-section">
-      <h2>Date History</h2>
+    <div id="dateHistoryView" class="history-detail-view hidden">
+      <div class="history-section-header">
+        <h2>Date History</h2>
+        <button id="backToHistoryHomeFromDate" class="back-history-btn" type="button">
+          Back
+        </button>
+      </div>
+
       <p>Future history for the date-based birthday filter.</p>
       <div id="historyDateContent">
         <div class="empty-state">

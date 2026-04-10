@@ -1,6 +1,7 @@
 import { generateId } from "./utils.js";
 
 const HISTORY_STORAGE_KEY = "boomclub_history";
+const EDIT_DRAFT_KEY = "boomclub_edit_draft";
 
 export function getHistory() {
   const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
@@ -20,6 +21,7 @@ export function saveMonthHistory({
   groupedByMonth,
   notSpecifiedPeople = [],
   headers = [],
+  sourceFiles = [],
 }) {
   const history = getHistory();
 
@@ -30,6 +32,7 @@ export function saveMonthHistory({
     groupedByMonth,
     notSpecifiedPeople,
     headers,
+    sourceFiles,
     createdAt: new Date().toISOString(),
   };
 
@@ -48,4 +51,29 @@ export function getMonthHistory() {
 export function getLatestHistoryItem() {
   const history = getHistory();
   return history.length ? history[0] : null;
+}
+
+export function getHistoryItemById(id) {
+  return getHistory().find((item) => item.id === id) || null;
+}
+
+export function saveEditDraft(data) {
+  sessionStorage.setItem(EDIT_DRAFT_KEY, JSON.stringify(data));
+}
+
+export function getEditDraft() {
+  const raw = sessionStorage.getItem(EDIT_DRAFT_KEY);
+
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error("Failed to parse edit draft:", error);
+    return null;
+  }
+}
+
+export function clearEditDraft() {
+  sessionStorage.removeItem(EDIT_DRAFT_KEY);
 }
