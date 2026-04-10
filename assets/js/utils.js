@@ -208,13 +208,14 @@ export function formatFullDateTime(isoString) {
   return `${day}/${month}/${year} - ${hours}:${minutes} ${ampm}`;
 }
 
+
 export function getMinutesAgoText(isoString) {
   const createdDate = new Date(isoString);
   const now = new Date();
 
   const diffMs = now - createdDate;
   const diffMinutes = Math.floor(diffMs / 60000);
-  const diffHours = diffMs / 3600000;
+  const diffHours = Math.floor(diffMinutes / 60);
 
   const isSameDay =
     now.getFullYear() === createdDate.getFullYear() &&
@@ -229,11 +230,23 @@ export function getMinutesAgoText(isoString) {
     return "Just now";
   }
 
-  if (diffMinutes === 1) {
-    return "1 minute ago";
+  if (diffMinutes < 60) {
+    if (diffMinutes === 1) return "1 minute ago";
+    return `${diffMinutes} minutes ago`;
   }
 
-  return `${diffMinutes} minutes ago`;
+  const remainingMinutes = diffMinutes % 60;
+
+  if (remainingMinutes === 0) {
+    if (diffHours === 1) return "1 hour ago";
+    return `${diffHours} hours ago`;
+  }
+
+  if (diffHours === 1) {
+    return `1 hour and ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} ago`;
+  }
+
+  return `${diffHours} hours and ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} ago`;
 }
 
 export function getTotalPeopleCount(groupedByMonth) {
