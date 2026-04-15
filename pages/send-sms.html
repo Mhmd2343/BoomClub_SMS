@@ -1,0 +1,31 @@
+<section class="page-section">
+  <div class="container">
+    <div class="send-sms-header">
+      <div>
+        <h1>Send SMS</h1>
+        <p>
+          Upload a generated monthly workbook and review the reminder schedule
+          before SMS sending.
+        </p>
+      </div>
+    </div>
+
+    <div class="send-sms-upload-box">
+      <label class="send-sms-label" for="smsFileInput">
+        Upload Excel file (.xlsx only)
+      </label>
+
+      <input type="file" id="smsFileInput" accept=".xlsx" multiple />
+
+      <div id="smsSelectedFile" class="sms-selected-file"></div>
+
+      <div id="smsErrorLabel" class="sms-error-label" aria-live="polite"></div>
+
+      <button id="processSmsFileBtn" type="button">
+        Process File
+      </button>
+    </div>
+
+    <div id="smsReportContainer" class="sms-report-container"></div>
+  </div>
+</section>

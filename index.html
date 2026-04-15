@@ -12,13 +12,21 @@
   <link rel="stylesheet" href="assets/css/filter-by-date.css" />
   <link rel="stylesheet" href="assets/css/history.css" />
   <link rel="stylesheet" href="assets/css/modal.css" />
+  <link rel="stylesheet" href="assets/css/send-sms.css" />
   <link rel="stylesheet" href="assets/css/responsive.css" />
 </head>
 <body>
   <div class="app-layout">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <h2>BoomClub</h2>
+        <div class="sidebar-brand-top">
+          <img
+            src="assets/images/BoomClub_logo.png"
+            alt="BoomClub Logo"
+            class="sidebar-logo"
+          />
+          <h2>BoomClub</h2>
+        </div>
         <p>Dashboard</p>
       </div>
 
@@ -38,6 +46,10 @@
         <button class="sidebar-btn" data-page="history">
           History
         </button>
+
+        <button class="sidebar-btn" data-page="send-sms">
+          Send SMS
+        </button>
       </nav>
     </aside>
 
@@ -52,7 +64,6 @@
     </main>
   </div>
 
-  <!-- GLOBAL FILE PREVIEW MODAL -->
   <div id="filePreviewModal" class="file-preview-modal">
     <div class="file-preview-backdrop" id="filePreviewBackdrop"></div>
 
@@ -77,4 +88,4 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script type="module" src="assets/js/main.js"></script>
 </body>
-</html>     
+</html>

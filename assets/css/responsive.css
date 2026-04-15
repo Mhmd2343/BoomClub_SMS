@@ -55,6 +55,20 @@
   h1 {
     font-size: 24px;
   }
+
+    .send-sms-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sms-report-grid,
+  .sms-time-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sms-month-count-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 600px) {
@@ -138,4 +152,35 @@
   .file-preview-header h2 {
     font-size: 20px;
   }
+
+   .sms-report-card,
+  .sms-summary-box,
+  .sms-form-box,
+  .send-sms-upload-box {
+    padding: 16px;
+  }
+
+  .sms-textarea {
+    min-height: 160px;
+  }
+
+
+    .sms-month-count-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sms-file-pill {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sms-file-pill-actions {
+    width: 100%;
+  }
+
+  .sms-small-action-btn,
+  .sms-preview-all-btn {
+    width: 100%;
+  }
+
 }

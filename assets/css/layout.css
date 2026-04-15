@@ -112,3 +112,40 @@
 .page-section {
   display: block;
 }
+
+.sidebar-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-brand-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sidebar-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: block;
+}
+
+.sidebar-brand h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.sidebar-brand p {
+  margin: 0;
+  color: #FFD966;
+  font-size: 14px;
+  padding-left: 58px;
+}

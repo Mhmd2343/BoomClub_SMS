@@ -105,3 +105,28 @@ export function getEditDraft() {
 export function clearEditDraft() {
   sessionStorage.removeItem(EDIT_DRAFT_KEY);
 }
+
+
+export function saveSendSmsHistory({
+  fromNumber,
+  recipients,
+  messageText,
+}) {
+  const history = getHistory();
+
+  const historyItem = {
+    id: generateId(),
+    type: "sendSms",
+    fromNumber,
+    recipients, // array of numbers
+    messageText,
+    createdAt: new Date().toISOString(),
+  };
+
+  history.unshift(historyItem);
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+}
+
+export function getSendSmsHistory() {
+  return getHistory().filter((item) => item.type === "sendSms");
+}

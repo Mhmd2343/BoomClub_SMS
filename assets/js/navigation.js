@@ -2,6 +2,7 @@ import { initDashboardPage } from "./pages/dashboard.js";
 import { initFilterByMonthPage } from "./pages/filterByMonth.js";
 import { initFilterByDatePage } from "./pages/filterByDate.js";
 import { initHistoryPage } from "./pages/history.js";
+import { initSendSmsPage } from "./pages/sendSms.js";
 
 const pageContent = () => document.getElementById("pageContent");
 const sidebar = () => document.getElementById("sidebar");
@@ -25,10 +26,13 @@ const pageConfig = {
     htmlPath: "./pages/history.html",
     init: initHistoryPage,
   },
+  "send-sms": {
+    htmlPath: "./pages/send-sms.html",
+    init: initSendSmsPage,
+  },
 };
 
 export function initNavigation() {
-  // Sidebar buttons
   document.querySelectorAll(".sidebar-btn").forEach((button) => {
     button.addEventListener("click", async () => {
       const page = button.dataset.page;
@@ -36,7 +40,6 @@ export function initNavigation() {
     });
   });
 
-  // Dashboard/internal buttons using event delegation
   document.addEventListener("click", async (event) => {
     const goPageButton = event.target.closest("[data-go-page]");
     if (!goPageButton) return;
