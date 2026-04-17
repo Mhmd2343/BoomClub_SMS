@@ -1,12 +1,9 @@
 import {
-  collectHeaders,
+  buildCleanPersonRow,
+  collectCleanHeaders,
   createEmptyMonthGroups,
-  formatDateDDMMYYYY,
-  getDobValue,
   getMonthName,
   getTotalPeopleCount,
-  isPersonNotSpecified,
-  parseDOB,
   readFileAsArrayBuffer,
 } from "../utils.js";
 import {
@@ -232,7 +229,7 @@ async function handleFile() {
 
       workbook.SheetNames.forEach((sheetName) => {
         const worksheet = workbook.Sheets[sheetName];
-        const sheetData = XLSX.utils.sheet_to_json(worksheet);
+        const sheetData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
         parsedSourceFile.sheets.push({
           sheetName,
@@ -247,31 +244,24 @@ async function handleFile() {
 
     const groupedByMonth = createEmptyMonthGroups();
     const notSpecifiedPeople = [];
-    const headers = collectHeaders(allData);
 
     allData.forEach((person) => {
-      if (isPersonNotSpecified(person)) {
-        notSpecifiedPeople.push(person);
+      const { cleanedRow, detectedPhone, detectedDob } = buildCleanPersonRow(person);
+
+      if (!detectedPhone || !detectedDob) {
+        notSpecifiedPeople.push(cleanedRow);
         return;
       }
 
-      const dob = getDobValue(person);
-      const birthDate = parseDOB(dob);
-
-      if (!birthDate) {
-        console.log("Invalid DOB skipped:", dob, person);
-        return;
-      }
-
-      const monthName = getMonthName(birthDate.getMonth());
-
-      const normalizedPerson = {
-        ...person,
-        "date of Birth": formatDateDDMMYYYY(birthDate),
-      };
-
-      groupedByMonth[monthName].push(normalizedPerson);
+      const monthName = getMonthName(detectedDob.getMonth());
+      groupedByMonth[monthName].push(cleanedRow);
     });
+
+    const allCleanRows = [
+      ...Object.values(groupedByMonth).flat(),
+      ...notSpecifiedPeople,
+    ];
+    const headers = collectCleanHeaders(allCleanRows);
 
     latestGroupedByMonth = {
       groupedByMonth,

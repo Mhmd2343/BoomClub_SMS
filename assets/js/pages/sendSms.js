@@ -340,14 +340,85 @@ const name = getNameValue(person);
 const dobRaw = getDobValue(person);
 const phone = getPhoneValue(person);
 
-if (!name || !dobRaw || !phone) {
+const isMissingPhoneOrDob = !dobRaw || !phone;
+
+// 🔥 detect if we are already inside "not specified" sheet
+const isNotSpecifiedSheet = requiredSheetName === "not specified";
+
+// ✅ if already in not specified → ALWAYS include
+if (isNotSpecifiedSheet) {
+  rows.push({
+    name: name || "Unknown",
+    phone: phone || "",
+    originalDobLabel: dobRaw || "Missing DOB",
+    originalDobWeekday: "",
+    reminderDateLabel: "",
+    reminderDateWeekday: "",
+    sheetName: "not specified",
+    sourceFileName: fileName,
+    rowNumber: index + 2,
+    sortDate: new Date(9999, 0, 1),
+  });
+
+  return;
+}
+
+// normal logic for other sheets
+if (!name && !isMissingPhoneOrDob) {
+  return;
+}
+
+if (isMissingPhoneOrDob) {
+  rows.push({
+    name: name || "Unknown",
+    phone: phone || "",
+    originalDobLabel: dobRaw || "Missing DOB",
+    originalDobWeekday: "",
+    reminderDateLabel: "",
+    reminderDateWeekday: "",
+    sheetName: "not specified",
+    sourceFileName: fileName,
+    rowNumber: index + 2,
+    sortDate: new Date(9999, 0, 1),
+  });
+
+  return;
+}
+
+if (isMissingPhoneOrDob) {
+  rows.push({
+    name: name || "Unknown",
+    phone: phone || "",
+    originalDobLabel: dobRaw || "Missing DOB",
+    originalDobWeekday: "",
+    reminderDateLabel: "",
+    reminderDateWeekday: "",
+    sheetName: "not specified".trim().toLowerCase(),
+    sourceFileName: fileName,
+    rowNumber: index + 2,
+    sortDate: new Date(9999, 0, 1), // push to bottom
+  });
+
   return;
 }
 
         const parsedDob = parseDobFlexible(dobRaw);
-        if (!parsedDob) {
-          return;
-        }
+if (!parsedDob) {
+  rows.push({
+    name: name || "Unknown",
+    phone: phone || "",
+    originalDobLabel: dobRaw || "Invalid DOB",
+    originalDobWeekday: "",
+    reminderDateLabel: "",
+    reminderDateWeekday: "",
+    sheetName: "not specified".trim().toLowerCase(),
+    sourceFileName: fileName,
+    rowNumber: index + 2,
+    sortDate: new Date(9999, 0, 1),
+  });
+
+  return;
+}
 
         const originalDobLabel = formatDateDDMMYYYY(parsedDob);
         const originalDobWeekday = getWeekdayName(parsedDob);
@@ -609,7 +680,13 @@ function getSheetCounts(rows) {
   });
 
   rows.forEach((row) => {
-    counts[row.sheetName] = (counts[row.sheetName] || 0) + 1;
+    const normalized = String(row.sheetName || "")
+      .trim()
+      .toLowerCase();
+
+    if (counts.hasOwnProperty(normalized)) {
+      counts[normalized]++;
+    }
   });
 
   return counts;

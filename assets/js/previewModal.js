@@ -1,4 +1,4 @@
-import { readFileAsArrayBuffer } from "./utils.js";
+import { readFileAsArrayBuffer, buildCleanPersonRow, collectCleanHeaders } from "./utils.js";
 
 let filePreviewModal;
 let filePreviewBackdrop;
@@ -52,20 +52,6 @@ function openModal(title, subtitle) {
   return true;
 }
 
-function getTableHeaders(rows) {
-  const headers = [];
-
-  rows.forEach((row) => {
-    Object.keys(row || {}).forEach((key) => {
-      if (!headers.includes(key)) {
-        headers.push(key);
-      }
-    });
-  });
-
-  return headers;
-}
-
 function createEmptyBlock(message, description = "") {
   const empty = document.createElement("div");
   empty.className = "preview-empty";
@@ -84,14 +70,7 @@ function createRowsTable(rows) {
     return wrapper;
   }
 
-  const headers = getTableHeaders(rows);
-
-  if (headers.length === 0) {
-    wrapper.appendChild(
-      createEmptyBlock("This sheet has no readable columns.")
-    );
-    return wrapper;
-  }
+  const headers = collectCleanHeaders(rows);
 
   const table = document.createElement("table");
   table.className = "preview-table";
@@ -153,6 +132,13 @@ function appendSheetsToContainer(container, sheets = []) {
   });
 }
 
+function cleanRowsForPreview(rows) {
+  return (rows || []).map((row) => {
+    const { cleanedRow } = buildCleanPersonRow(row);
+    return cleanedRow;
+  });
+}
+
 export async function openFilePreview(file) {
   if (!file) return;
 
@@ -179,11 +165,11 @@ export async function openFilePreview(file) {
 
     const sheets = workbook.SheetNames.map((sheetName) => {
       const worksheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(worksheet);
+      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
       return {
         sheetName,
-        rows,
+        rows: cleanRowsForPreview(rows),
       };
     });
 
@@ -228,7 +214,13 @@ export function openStoredFilesPreview(sourceFiles = [], modalTitle = "File Prev
     fileHeading.textContent = `${index + 1}. ${sourceFile.name || "Unnamed File"}`;
 
     fileBlock.appendChild(fileHeading);
-    appendSheetsToContainer(fileBlock, sourceFile.sheets || []);
+
+    const cleanedSheets = (sourceFile.sheets || []).map((sheet) => ({
+      sheetName: sheet.sheetName,
+      rows: cleanRowsForPreview(sheet.rows || []),
+    }));
+
+    appendSheetsToContainer(fileBlock, cleanedSheets);
     filePreviewBody.appendChild(fileBlock);
   });
 }

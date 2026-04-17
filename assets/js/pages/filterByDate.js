@@ -1,10 +1,8 @@
 import {
   readFileAsArrayBuffer,
-  isPersonNotSpecified,
-  getDobValue,
-  parseDOB,
+  buildCleanPersonRow,
+  collectCleanHeaders,
   getMonthName,
-  collectHeaders,
 } from "../utils.js";
 import {
   saveDateHistory,
@@ -237,29 +235,28 @@ function processRowsByDate(rows) {
   const notSpecifiedPeople = [];
 
   rows.forEach((person) => {
-    if (isPersonNotSpecified(person)) {
-      notSpecifiedPeople.push(person);
+    const { cleanedRow, detectedPhone, detectedDob } = buildCleanPersonRow(person);
+
+    if (!detectedPhone || !detectedDob) {
+      notSpecifiedPeople.push(cleanedRow);
       return;
     }
 
-    const rawDob = getDobValue(person);
-    const parsedDob = parseDOB(rawDob);
-
-    if (!parsedDob) {
-      notSpecifiedPeople.push(person);
-      return;
-    }
-
-    const key = getMonthDayLabel(parsedDob);
+    const key = getMonthDayLabel(detectedDob);
 
     if (!groupedByDate[key]) {
       groupedByDate[key] = [];
     }
 
-    groupedByDate[key].push(person);
+    groupedByDate[key].push(cleanedRow);
   });
 
-  const headers = collectHeaders([...rows, ...notSpecifiedPeople]);
+  const allCleanRows = [
+    ...Object.values(groupedByDate).flat(),
+    ...notSpecifiedPeople,
+  ];
+
+  const headers = collectCleanHeaders(allCleanRows);
 
   return {
     groupedByDate,
