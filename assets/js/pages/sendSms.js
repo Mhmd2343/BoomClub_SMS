@@ -17,8 +17,18 @@ const REQUIRED_SHEETS = [
   "not specified",
 ];
 
+const SELECTABLE_SMS_MONTHS = REQUIRED_SHEETS.filter(
+  (sheet) => sheet !== "not specified"
+);
+
 let selectedSmsFiles = [];
 let latestSmsRows = [];
+let selectedSmsMonths = new Set();
+let smsFormDraft = {
+  hour: "19",
+  minute: "00",
+  message: "",
+};
 
 export function initSendSmsPage() {
   const fileInput = document.getElementById("smsFileInput");
@@ -192,6 +202,12 @@ function clearSmsReport() {
 
   reportContainer.innerHTML = "";
   latestSmsRows = [];
+  selectedSmsMonths = new Set();
+  smsFormDraft = {
+    hour: "19",
+    minute: "00",
+    message: "",
+  };
 }
 
 async function handleProcessSmsFiles() {
@@ -211,7 +227,10 @@ async function handleProcessSmsFiles() {
     showSmsError(
       buildErrorListHtml([
         ...invalidExtensionFiles.map(
-          (file) => `File "<strong>${escapeHtml(file.name)}</strong>" is invalid because only .xlsx files are allowed.`
+          (file) =>
+            `File "<strong>${escapeHtml(
+              file.name
+            )}</strong>" is invalid because only .xlsx files are allowed.`
         ),
       ])
     );
@@ -261,6 +280,7 @@ async function handleProcessSmsFiles() {
     }
 
     latestSmsRows = mergedRows;
+    initializeSelectedSmsMonths(mergedRows);
     renderSmsReport(mergedRows, selectedSmsFiles.length);
   } catch (error) {
     console.error("Send SMS processing failed:", error);
@@ -286,7 +306,9 @@ function validateWorkbookStructure(workbook, fileName = "Unknown file") {
     return {
       isValid: false,
       message:
-        `File "<strong>${escapeHtml(fileName)}</strong>" cannot be submitted because it does not contain all required sheets.<br>` +
+        `File "<strong>${escapeHtml(
+          fileName
+        )}</strong>" cannot be submitted because it does not contain all required sheets.<br>` +
         `Missing sheet(s): <strong>${missingSheets.join(", ")}</strong>.<br>` +
         `Required sheets are: January, February, March, April, May, June, July, August, September, October, November, December, Not Specified.`,
     };
@@ -296,7 +318,9 @@ function validateWorkbookStructure(workbook, fileName = "Unknown file") {
     return {
       isValid: false,
       message:
-        `File "<strong>${escapeHtml(fileName)}</strong>" cannot be submitted because it must contain exactly 13 sheets: January to December and Not Specified.`,
+        `File "<strong>${escapeHtml(
+          fileName
+        )}</strong>" cannot be submitted because it must contain exactly 13 sheets: January to December and Not Specified.`,
     };
   }
 
@@ -308,7 +332,11 @@ function validateWorkbookStructure(workbook, fileName = "Unknown file") {
     return {
       isValid: false,
       message:
-        `File "<strong>${escapeHtml(fileName)}</strong>" cannot be submitted because it contains unexpected sheet(s): <strong>${extraSheets.join(", ")}</strong>.`,
+        `File "<strong>${escapeHtml(
+          fileName
+        )}</strong>" cannot be submitted because it contains unexpected sheet(s): <strong>${extraSheets.join(
+          ", "
+        )}</strong>.`,
     };
   }
 
@@ -336,89 +364,68 @@ function extractSmsRowsFromMultipleWorkbooks(fileWorkbooks) {
       const sheetRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
       sheetRows.forEach((person, index) => {
-const name = getNameValue(person);
-const dobRaw = getDobValue(person);
-const phone = getPhoneValue(person);
+        const name = getNameValue(person);
+        const dobRaw = getDobValue(person);
+        const phone = getPhoneValue(person);
 
-const isMissingPhoneOrDob = !dobRaw || !phone;
+        const isMissingPhoneOrDob = !dobRaw || !phone;
+        const isNotSpecifiedSheet = requiredSheetName === "not specified";
 
-// 🔥 detect if we are already inside "not specified" sheet
-const isNotSpecifiedSheet = requiredSheetName === "not specified";
+        if (isNotSpecifiedSheet) {
+          rows.push({
+            name: name || "Unknown",
+            phone: phone || "",
+            originalDobLabel: dobRaw || "Missing DOB",
+            originalDobWeekday: "",
+            reminderDateLabel: "",
+            reminderDateWeekday: "",
+            sheetName: "not specified",
+            sourceFileName: fileName,
+            rowNumber: index + 2,
+            sortDate: new Date(9999, 0, 1),
+          });
 
-// ✅ if already in not specified → ALWAYS include
-if (isNotSpecifiedSheet) {
-  rows.push({
-    name: name || "Unknown",
-    phone: phone || "",
-    originalDobLabel: dobRaw || "Missing DOB",
-    originalDobWeekday: "",
-    reminderDateLabel: "",
-    reminderDateWeekday: "",
-    sheetName: "not specified",
-    sourceFileName: fileName,
-    rowNumber: index + 2,
-    sortDate: new Date(9999, 0, 1),
-  });
+          return;
+        }
 
-  return;
-}
+        if (!name && !isMissingPhoneOrDob) {
+          return;
+        }
 
-// normal logic for other sheets
-if (!name && !isMissingPhoneOrDob) {
-  return;
-}
+        if (isMissingPhoneOrDob) {
+          rows.push({
+            name: name || "Unknown",
+            phone: phone || "",
+            originalDobLabel: dobRaw || "Missing DOB",
+            originalDobWeekday: "",
+            reminderDateLabel: "",
+            reminderDateWeekday: "",
+            sheetName: "not specified",
+            sourceFileName: fileName,
+            rowNumber: index + 2,
+            sortDate: new Date(9999, 0, 1),
+          });
 
-if (isMissingPhoneOrDob) {
-  rows.push({
-    name: name || "Unknown",
-    phone: phone || "",
-    originalDobLabel: dobRaw || "Missing DOB",
-    originalDobWeekday: "",
-    reminderDateLabel: "",
-    reminderDateWeekday: "",
-    sheetName: "not specified",
-    sourceFileName: fileName,
-    rowNumber: index + 2,
-    sortDate: new Date(9999, 0, 1),
-  });
-
-  return;
-}
-
-if (isMissingPhoneOrDob) {
-  rows.push({
-    name: name || "Unknown",
-    phone: phone || "",
-    originalDobLabel: dobRaw || "Missing DOB",
-    originalDobWeekday: "",
-    reminderDateLabel: "",
-    reminderDateWeekday: "",
-    sheetName: "not specified".trim().toLowerCase(),
-    sourceFileName: fileName,
-    rowNumber: index + 2,
-    sortDate: new Date(9999, 0, 1), // push to bottom
-  });
-
-  return;
-}
+          return;
+        }
 
         const parsedDob = parseDobFlexible(dobRaw);
-if (!parsedDob) {
-  rows.push({
-    name: name || "Unknown",
-    phone: phone || "",
-    originalDobLabel: dobRaw || "Invalid DOB",
-    originalDobWeekday: "",
-    reminderDateLabel: "",
-    reminderDateWeekday: "",
-    sheetName: "not specified".trim().toLowerCase(),
-    sourceFileName: fileName,
-    rowNumber: index + 2,
-    sortDate: new Date(9999, 0, 1),
-  });
+        if (!parsedDob) {
+          rows.push({
+            name: name || "Unknown",
+            phone: phone || "",
+            originalDobLabel: dobRaw || "Invalid DOB",
+            originalDobWeekday: "",
+            reminderDateLabel: "",
+            reminderDateWeekday: "",
+            sheetName: "not specified",
+            sourceFileName: fileName,
+            rowNumber: index + 2,
+            sortDate: new Date(9999, 0, 1),
+          });
 
-  return;
-}
+          return;
+        }
 
         const originalDobLabel = formatDateDDMMYYYY(parsedDob);
         const originalDobWeekday = getWeekdayName(parsedDob);
@@ -429,18 +436,18 @@ if (!parsedDob) {
           currentYear
         );
 
-rows.push({
-  name,
-  phone,
-  originalDobLabel,
-  originalDobWeekday,
-  reminderDateLabel: formatDateDDMMYYYY(reminderDate),
-  reminderDateWeekday: getWeekdayName(reminderDate),
-  sheetName: requiredSheetName,
-  sourceFileName: fileName,
-  rowNumber: index + 2,
-  sortDate: reminderDate,
-});
+        rows.push({
+          name,
+          phone,
+          originalDobLabel,
+          originalDobWeekday,
+          reminderDateLabel: formatDateDDMMYYYY(reminderDate),
+          reminderDateWeekday: getWeekdayName(reminderDate),
+          sheetName: requiredSheetName,
+          sourceFileName: fileName,
+          rowNumber: index + 2,
+          sortDate: reminderDate,
+        });
       });
     });
   });
@@ -458,42 +465,88 @@ rows.push({
   return rows;
 }
 
+function initializeSelectedSmsMonths(rows) {
+  const counts = getSheetCounts(rows);
+  selectedSmsMonths = new Set();
+
+  SELECTABLE_SMS_MONTHS.forEach((month) => {
+    if ((counts[month] || 0) > 0) {
+      selectedSmsMonths.add(month);
+    }
+  });
+}
+
 function renderSmsReport(rows, filesCount = 1) {
   const container = document.getElementById("smsReportContainer");
   if (!container) return;
 
   const groupedCounts = getSheetCounts(rows);
+  const filteredRows = getFilteredSmsRows();
+  const filteredRecipients = getUniqueRecipients(filteredRows);
 
   const countsHtml = REQUIRED_SHEETS.map((sheetName) => {
     const count = groupedCounts[sheetName] || 0;
+    const isSelectable = SELECTABLE_SMS_MONTHS.includes(sheetName);
+    const isSelected = selectedSmsMonths.has(sheetName);
 
     return `
-      <div class="sms-month-count-box">
+      <button
+        type="button"
+        class="sms-month-count-box ${
+          isSelectable ? "sms-month-selectable" : "sms-month-disabled"
+        } ${isSelected ? "selected" : ""}"
+        data-sms-month="${escapeHtml(sheetName)}"
+        ${isSelectable ? "" : "disabled"}
+        title="${
+          isSelectable
+            ? "Click to select or unselect this month"
+            : "Not Specified is informational only and cannot be selected for SMS sending"
+        }"
+      >
         <strong>${toDisplaySheetName(sheetName)}</strong>
         <span>${count} ${count === 1 ? "person" : "people"}</span>
-      </div>
+        ${
+          isSelectable
+            ? `<small>${isSelected ? "Selected for sending" : "Not selected"}</small>`
+            : `<small>Informational only</small>`
+        }
+      </button>
     `;
   }).join("");
 
-  const reportCardsHtml = rows
-    .map((row) => {
-      return `
-        <div class="sms-report-card">
-          <h3>${escapeHtml(row.name)}</h3>
-          <p><strong>Source file:</strong> ${escapeHtml(row.sourceFileName)}</p>
-          <p><strong>Sheet:</strong> ${escapeHtml(toDisplaySheetName(row.sheetName))}</p>
-          <p>
-            <strong>Date of birth:</strong>
-            ${escapeHtml(row.originalDobWeekday)} - ${escapeHtml(row.originalDobLabel)}
-          </p>
-          <p>
-            <strong>Will send reminder in:</strong>
-            ${escapeHtml(row.reminderDateWeekday)} - ${escapeHtml(row.reminderDateLabel)}
-          </p>
+  const reportCardsHtml =
+    filteredRows.length > 0
+      ? filteredRows
+          .map((row) => {
+            return `
+              <div class="sms-report-card">
+                <h3>${escapeHtml(row.name)}</h3>
+                <p><strong>Source file:</strong> ${escapeHtml(row.sourceFileName)}</p>
+                <p><strong>Sheet:</strong> ${escapeHtml(
+                  toDisplaySheetName(row.sheetName)
+                )}</p>
+                <p>
+                  <strong>Date of birth:</strong>
+                  ${escapeHtml(row.originalDobWeekday)} - ${escapeHtml(
+              row.originalDobLabel
+            )}
+                </p>
+                <p>
+                  <strong>Will send reminder in:</strong>
+                  ${escapeHtml(row.reminderDateWeekday)} - ${escapeHtml(
+              row.reminderDateLabel
+            )}
+                </p>
+              </div>
+            `;
+          })
+          .join("")
+      : `
+        <div class="empty-state sms-empty-selection-state">
+          <strong>No selected months yet.</strong>
+          <p>Please select at least one month box above to prepare the SMS recipients.</p>
         </div>
       `;
-    })
-    .join("");
 
   container.innerHTML = `
     <div class="sms-summary-box">
@@ -508,8 +561,35 @@ function renderSmsReport(rows, filesCount = 1) {
       </p>
     </div>
 
+    <div class="sms-month-selection-toolbar">
+      <div class="sms-month-selection-info">
+        <strong>Selected months:</strong> ${getSelectedMonthsText()}
+      </div>
+
+      <div class="sms-month-selection-actions">
+        <button type="button" id="smsSelectAllMonthsBtn" class="sms-toolbar-btn">
+          Select All Months
+        </button>
+        <button type="button" id="smsClearAllMonthsBtn" class="sms-toolbar-btn sms-toolbar-btn-secondary">
+          Clear Selection
+        </button>
+      </div>
+    </div>
+
     <div class="sms-month-count-grid">
       ${countsHtml}
+    </div>
+
+    <div class="sms-filtered-summary-box">
+      <p>
+        Based on the selected month(s), the system will prepare
+        <strong>${filteredRows.length}</strong> reminder row${
+    filteredRows.length === 1 ? "" : "s"
+  }
+        and <strong>${filteredRecipients.length}</strong> unique phone number${
+    filteredRecipients.length === 1 ? "" : "s"
+  }.
+      </p>
     </div>
 
     <div class="sms-report-grid">
@@ -530,6 +610,7 @@ function renderSmsReport(rows, filesCount = 1) {
             min="0"
             max="23"
             placeholder="e.g. 9"
+            value="${escapeHtml(smsFormDraft.hour)}"
           />
         </div>
 
@@ -541,6 +622,7 @@ function renderSmsReport(rows, filesCount = 1) {
             min="0"
             max="59"
             placeholder="e.g. 30"
+            value="${escapeHtml(smsFormDraft.minute)}"
           />
         </div>
       </div>
@@ -553,57 +635,124 @@ function renderSmsReport(rows, filesCount = 1) {
         id="smsTextArea"
         class="sms-textarea"
         placeholder="Leave empty for now..."
-      ></textarea>
+      >${escapeHtml(smsFormDraft.message)}</textarea>
 
-<button
-  id="finalSendSmsBtn"
-  type="button"
-  class="disabled-send-sms-btn"
-  title="Click to save this SMS action into history."
->
-  Send SMS
-</button>
+      <button
+        id="finalSendSmsBtn"
+        type="button"
+        class="disabled-send-sms-btn"
+        title="Click to save this SMS action into history."
+      >
+        Send SMS for Selected Month(s)
+      </button>
 
-        <div id="smsSendErrorLabel" class="sms-error-label sms-send-error-label"></div>
-      </div>
-
-      <p class="sms-disabled-note">
-        SMS sending is disabled for now. Later, when enabled, it should ask:
-        “Are you sure?”
-      </p>
+      <div id="smsSendErrorLabel" class="sms-error-label sms-send-error-label"></div>
     </div>
+
+    <p class="sms-disabled-note">
+      SMS sending is disabled for now. Later, when enabled, it should ask:
+      “Are you sure?”
+    </p>
   `;
 
+  attachMonthSelectionEvents();
+  attachToolbarEvents();
   attachTimeValidationEvents();
+  attachFormDraftEvents();
   validateSendTimeInputs();
 
-const sendButton = document.getElementById("finalSendSmsBtn");
-if (sendButton) {
-  sendButton.addEventListener("click", () => {
-    const isValidTime = validateSendTimeInputs();
-    if (!isValidTime) return;
+  const sendButton = document.getElementById("finalSendSmsBtn");
+  if (sendButton) {
+    sendButton.addEventListener("click", () => {
+      const isValidTime = validateSendTimeInputs();
+      if (!isValidTime) return;
 
-    const confirmed = confirm("Are you sure you want to send these SMS messages?");
-    if (!confirmed) return;
+      const selectedRows = getFilteredSmsRows();
+      if (selectedRows.length === 0) {
+        showSendSmsInlineError(
+          "Please select at least one month that contains people before sending."
+        );
+        return;
+      }
 
-    const smsTextArea = document.getElementById("smsTextArea");
-    const messageText = smsTextArea ? smsTextArea.value.trim() : "";
+      const recipients = getUniqueRecipients(selectedRows);
+      if (recipients.length === 0) {
+        showSendSmsInlineError(
+          "No valid phone numbers were found inside the selected month(s)."
+        );
+        return;
+      }
 
-    const recipients = latestSmsRows
-      .map((row) => row.phone)
-      .filter(Boolean);
+      clearSendSmsInlineError();
 
-    const fromNumber = "+96170000000"; // replace later with your real connected number
+      const confirmed = confirm(
+        `Are you sure you want to send SMS messages for ${selectedRows.length} selected row(s) across ${selectedSmsMonths.size} month(s)?`
+      );
+      if (!confirmed) return;
 
-    saveSendSmsHistory({
-      fromNumber,
-      recipients,
-      messageText,
+      const smsTextArea = document.getElementById("smsTextArea");
+      const messageText = smsTextArea ? smsTextArea.value.trim() : "";
+
+      const fromNumber = "+96170000000"; // replace later with your real connected number
+
+      saveSendSmsHistory({
+        fromNumber,
+        recipients,
+        messageText,
+      });
+
+      alert("SMS send action for selected month(s) was saved in history successfully.");
     });
+  }
+}
 
-    alert("SMS send action saved in history successfully.");
+function attachMonthSelectionEvents() {
+  document.querySelectorAll("[data-sms-month]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const month = normalizeSheetName(button.dataset.smsMonth || "");
+      if (!month || !SELECTABLE_SMS_MONTHS.includes(month)) return;
+
+      collectSmsFormDraft();
+
+      if (selectedSmsMonths.has(month)) {
+        selectedSmsMonths.delete(month);
+      } else {
+        selectedSmsMonths.add(month);
+      }
+
+      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+    });
   });
 }
+
+function attachToolbarEvents() {
+  const selectAllBtn = document.getElementById("smsSelectAllMonthsBtn");
+  const clearAllBtn = document.getElementById("smsClearAllMonthsBtn");
+
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener("click", () => {
+      collectSmsFormDraft();
+
+      const counts = getSheetCounts(latestSmsRows);
+      selectedSmsMonths = new Set();
+
+      SELECTABLE_SMS_MONTHS.forEach((month) => {
+        if ((counts[month] || 0) > 0) {
+          selectedSmsMonths.add(month);
+        }
+      });
+
+      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+    });
+  }
+
+  if (clearAllBtn) {
+    clearAllBtn.addEventListener("click", () => {
+      collectSmsFormDraft();
+      selectedSmsMonths = new Set();
+      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+    });
+  }
 }
 
 function attachTimeValidationEvents() {
@@ -621,7 +770,39 @@ function attachTimeValidationEvents() {
   }
 }
 
+function attachFormDraftEvents() {
+  const hourInput = document.getElementById("smsHourInput");
+  const minuteInput = document.getElementById("smsMinuteInput");
+  const smsTextArea = document.getElementById("smsTextArea");
+
+  if (hourInput) {
+    hourInput.addEventListener("input", collectSmsFormDraft);
+  }
+
+  if (minuteInput) {
+    minuteInput.addEventListener("input", collectSmsFormDraft);
+  }
+
+  if (smsTextArea) {
+    smsTextArea.addEventListener("input", collectSmsFormDraft);
+  }
+}
+
+function collectSmsFormDraft() {
+  const hourInput = document.getElementById("smsHourInput");
+  const minuteInput = document.getElementById("smsMinuteInput");
+  const smsTextArea = document.getElementById("smsTextArea");
+
+  smsFormDraft = {
+    hour: hourInput ? hourInput.value : smsFormDraft.hour,
+    minute: minuteInput ? minuteInput.value : smsFormDraft.minute,
+    message: smsTextArea ? smsTextArea.value : smsFormDraft.message,
+  };
+}
+
 function validateSendTimeInputs() {
+  collectSmsFormDraft();
+
   const hourInput = document.getElementById("smsHourInput");
   const minuteInput = document.getElementById("smsMinuteInput");
   const sendErrorLabel = document.getElementById("smsSendErrorLabel");
@@ -668,6 +849,42 @@ function validateSendTimeInputs() {
   return true;
 }
 
+function showSendSmsInlineError(message) {
+  const sendErrorLabel = document.getElementById("smsSendErrorLabel");
+  if (!sendErrorLabel) return;
+
+  sendErrorLabel.textContent = message;
+  sendErrorLabel.classList.add("show");
+}
+
+function clearSendSmsInlineError() {
+  const sendErrorLabel = document.getElementById("smsSendErrorLabel");
+  if (!sendErrorLabel) return;
+
+  sendErrorLabel.textContent = "";
+  sendErrorLabel.classList.remove("show");
+}
+
+function getFilteredSmsRows() {
+  if (selectedSmsMonths.size === 0) {
+    return [];
+  }
+
+  return latestSmsRows.filter((row) => selectedSmsMonths.has(row.sheetName));
+}
+
+function getUniqueRecipients(rows) {
+  return [...new Set(rows.map((row) => normalizeValue(row.phone)).filter(Boolean))];
+}
+
+function getSelectedMonthsText() {
+  if (selectedSmsMonths.size === 0) {
+    return "None";
+  }
+
+  return [...selectedSmsMonths].map(toDisplaySheetName).join(", ");
+}
+
 function isWholeNumber(value) {
   return /^\d+$/.test(value);
 }
@@ -680,11 +897,9 @@ function getSheetCounts(rows) {
   });
 
   rows.forEach((row) => {
-    const normalized = String(row.sheetName || "")
-      .trim()
-      .toLowerCase();
+    const normalized = String(row.sheetName || "").trim().toLowerCase();
 
-    if (counts.hasOwnProperty(normalized)) {
+    if (Object.prototype.hasOwnProperty.call(counts, normalized)) {
       counts[normalized]++;
     }
   });
@@ -736,11 +951,11 @@ function getNameValue(person) {
 function getPhoneValue(person) {
   return normalizeValue(
     person["Phone number"] ||
-    person["Phone Number"] ||
-    person["Phone"] ||
-    person["phone"] ||
-    person["Phone num"] ||
-    person["phone number"]
+      person["Phone Number"] ||
+      person["Phone"] ||
+      person["phone"] ||
+      person["Phone num"] ||
+      person["phone number"]
   );
 }
 

@@ -7,7 +7,8 @@
 
 .send-sms-upload-box,
 .sms-summary-box,
-.sms-form-box {
+.sms-form-box,
+.sms-filtered-summary-box {
   margin-top: 24px;
   background: #FFF8E1;
   border: 1px solid #FFE08A;
@@ -239,4 +240,129 @@
 
 .sms-month-count-box strong {
   color: #A61B1B;
+}
+
+/* NEW */
+
+.sms-month-selection-toolbar {
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sms-month-selection-info {
+  color: #5C3A00;
+}
+
+.sms-month-selection-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sms-toolbar-btn {
+  padding: 10px 14px;
+  border: 1px solid #FFE08A;
+  border-radius: 10px;
+  background: #fff;
+  color: #A61B1B;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.sms-toolbar-btn:hover {
+  background: #fff3c4;
+}
+
+.sms-toolbar-btn-secondary {
+  background: #fff8e1;
+}
+
+.sms-month-count-box.sms-month-selectable {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.sms-month-count-box.sms-month-selectable:hover {
+  transform: translateY(-2px);
+  border-color: #D62828;
+  box-shadow: 0 8px 18px rgba(214, 40, 40, 0.08);
+}
+
+.sms-month-count-box.sms-month-selectable.selected {
+  background: #FFECC2;
+  border: 2px solid #D62828;
+  box-shadow: 0 10px 22px rgba(214, 40, 40, 0.12);
+}
+
+.sms-month-count-box small {
+  font-size: 12px;
+  color: #7A5A00;
+}
+
+.sms-month-disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.sms-filtered-summary-box {
+  margin-top: 20px;
+}
+
+.sms-filtered-summary-box p {
+  margin: 0;
+}
+
+.sms-empty-selection-state {
+  grid-column: 1 / -1;
+  background: #FFF8E1;
+  border: 1px dashed #FFE08A;
+  border-radius: 16px;
+  padding: 24px;
+}
+
+@media (max-width: 1100px) {
+  .sms-month-count-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .sms-report-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sms-month-count-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sms-time-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .sms-month-count-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sms-month-selection-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sms-month-selection-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .sms-toolbar-btn {
+    width: 100%;
+  }
 }
