@@ -195,3 +195,46 @@
 .hidden {
   display: none !important;
 }
+
+.sms-history-card {
+  cursor: default;
+}
+
+.sms-history-details {
+  margin-top: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.sms-history-details p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.sms-history-recipients {
+  margin-top: 16px;
+  background: #FFF8E1;
+  border: 1px solid #FFE08A;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.sms-history-recipients ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.sms-history-recipients li span {
+  display: inline-block;
+  margin-left: 8px;
+  color: #A61B1B;
+  font-weight: 700;
+}
+
+.sms-history-recipients li small {
+  display: block;
+  color: #666;
+  margin-top: 3px;
+}

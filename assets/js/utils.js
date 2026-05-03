@@ -157,28 +157,34 @@ export function normalizePhone(value) {
   let str = String(value).replace(/\D/g, "");
   if (!str) return null;
 
-  // 961 + local starting directly with 3 => add missing 0 after 961
-  // Example: 9613971651 -> 96103971651
-  if (str.startsWith("961") && str.length === 10) {
-    const localPart = str.slice(3);
-    if (localPart.startsWith("3")) {
-      return "9610" + localPart;
-    }
+  // 00 international format: 00961... -> 961...
+  if (str.startsWith("00961")) {
+    str = "961" + str.slice(5);
   }
 
-  // Already normalized international
-  if (str.startsWith("961") && str.length === 11) {
+  // Already Lebanese international format.
+  // Accept different real-life cases like:
+  // 961387783
+  // 9613387783
+  // 96171502345
+  if (str.startsWith("961") && str.length >= 9 && str.length <= 11) {
     return str;
   }
 
-  // Local 8-digit number
-  if (str.length === 8) {
-    return "961" + str;
+  // Local Lebanese number with leading 0:
+  // 0387783 -> 961387783
+  // 03387783 -> 9613387783
+  // 71502345 -> handled below if no 0
+  if (str.startsWith("0") && str.length >= 7 && str.length <= 8) {
+    return "961" + str.slice(1);
   }
 
-  // Local mobile where leading 0 disappeared: 3XXXXXX
-  if (str.length === 7 && str.startsWith("3")) {
-    return "9610" + str;
+  // Local Lebanese number without leading 0:
+  // 387783 -> 961387783
+  // 3387783 -> 9613387783
+  // 71502345 -> 96171502345
+  if (str.length >= 6 && str.length <= 8) {
+    return "961" + str;
   }
 
   return null;
@@ -191,13 +197,31 @@ export function detectPhone(value) {
 export function detectDOB(value) {
   if (value === undefined || value === null || value === "") return null;
 
-  // Excel serial date support
+  // Excel real date / serial number support
+  // Your real input is DD/MM/YYYY, but Excel may internally read it as MM/DD/YYYY.
+  // So for Excel numeric dates, first try to recover the intended DD/MM/YYYY meaning.
   if (typeof value === "number" && Number.isFinite(value)) {
     const excelDate = XLSX.SSF.parse_date_code(value);
+
     if (excelDate && excelDate.y && excelDate.m && excelDate.d) {
-      const date = new Date(excelDate.y, excelDate.m - 1, excelDate.d);
-      if (!Number.isNaN(date.getTime())) {
-        return date;
+      const swappedDate = createDateBySwappingExcelMonthDay(
+        excelDate.y,
+        excelDate.m,
+        excelDate.d
+      );
+
+      if (swappedDate) {
+        return swappedDate;
+      }
+
+      const normalExcelDate = createValidDate(
+        excelDate.y,
+        excelDate.m,
+        excelDate.d
+      );
+
+      if (normalExcelDate) {
+        return normalExcelDate;
       }
     }
   }
@@ -205,42 +229,135 @@ export function detectDOB(value) {
   const raw = String(value).trim();
   if (!raw) return null;
 
-  // pure numeric string that may be Excel serial date
+  // Numeric string that may be an Excel serial date
   if (/^\d{5}$/.test(raw)) {
     const num = Number(raw);
     const excelDate = XLSX.SSF.parse_date_code(num);
+
     if (excelDate && excelDate.y && excelDate.m && excelDate.d) {
-      const date = new Date(excelDate.y, excelDate.m - 1, excelDate.d);
-      if (!Number.isNaN(date.getTime())) {
-        return date;
+      const swappedDate = createDateBySwappingExcelMonthDay(
+        excelDate.y,
+        excelDate.m,
+        excelDate.d
+      );
+
+      if (swappedDate) {
+        return swappedDate;
+      }
+
+      const normalExcelDate = createValidDate(
+        excelDate.y,
+        excelDate.m,
+        excelDate.d
+      );
+
+      if (normalExcelDate) {
+        return normalExcelDate;
       }
     }
   }
 
-  // normalize extra spaces around separators, e.g. 25-4- 2014
+  // Text date support: DD/MM/YYYY, DD-MM-YYYY, DD MM YYYY
   const cleaned = raw.replace(/\s+/g, " ").replace(/\s*([\/\-])\s*/g, "$1");
 
-  // DD-MM-YYYY / DD/MM/YYYY / DD MM YYYY
-  let match = cleaned.match(/^(\d{1,2})[\/\-\s](\d{1,2})[\/\-\s](\d{4})$/);
+  const match = cleaned.match(/^(\d{1,2})[\/\-\s](\d{1,2})[\/\-\s](\d{4})$/);
 
   if (!match) return null;
 
   const day = parseInt(match[1], 10);
-  const month = parseInt(match[2], 10) - 1;
+  const month = parseInt(match[2], 10);
   const year = parseInt(match[3], 10);
 
-  const date = new Date(year, month, day);
+  return createValidDate(year, month, day);
+}
+
+function createDateBySwappingExcelMonthDay(year, excelMonth, excelDay) {
+  const intendedDay = excelMonth;
+  const intendedMonth = excelDay;
+
+  return createValidDate(year, intendedMonth, intendedDay);
+}
+
+function createValidDate(year, monthNumber, dayNumber) {
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(monthNumber) ||
+    !Number.isInteger(dayNumber)
+  ) {
+    return null;
+  }
+
+  if (monthNumber < 1 || monthNumber > 12) {
+    return null;
+  }
+
+  const date = new Date(year, monthNumber - 1, dayNumber);
 
   if (
     date.getFullYear() === year &&
-    date.getMonth() === month &&
-    date.getDate() === day
+    date.getMonth() === monthNumber - 1 &&
+    date.getDate() === dayNumber
   ) {
     return date;
   }
 
   return null;
 }
+
+
+
+const IGNORED_LABEL_VALUES = [
+  "name",
+  "family name",
+  "full name",
+  "date of birth",
+  "date of birth:",
+  "birth date",
+  "dob",
+  "address",
+  "adress",
+  "phone",
+  "phone number",
+  "cell",
+  "cellular",
+  "cell number",
+  "mobile",
+  "mobile number",
+  "place",
+  "place:",
+  "location",
+  "area",
+];
+
+function isIgnoredLabelValue(value) {
+  const text = normalizeValue(value)
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!text) return false;
+
+  return IGNORED_LABEL_VALUES.includes(text);
+}
+
+export function hasAnyCleanPhone(row) {
+  return Object.keys(row || {}).some((key) => {
+    return key.startsWith("Phone Number ") && normalizeValue(row[key]) !== "";
+  });
+}
+
+export function sortRowsWithPhonesFirst(rows = []) {
+  return [...rows].sort((a, b) => {
+    const aHasPhone = hasAnyCleanPhone(a);
+    const bHasPhone = hasAnyCleanPhone(b);
+
+    if (aHasPhone && !bHasPhone) return -1;
+    if (!aHasPhone && bHasPhone) return 1;
+
+    return 0;
+  });
+}
+
 
 /* ---------- CLEAN ROW BUILDING ---------- */
 
@@ -255,13 +372,15 @@ export function buildCleanPersonRow(person) {
   const values = Object.values(person || {});
   const originalName = normalizeValue(values[0] ?? "");
 
-  let detectedPhone = null;
+  const detectedPhones = [];
   let detectedDob = null;
 
+  // First pass: detect phones and DOB from all cells.
   values.forEach((cell) => {
-    if (!detectedPhone) {
-      const phone = detectPhone(cell);
-      if (phone) detectedPhone = phone;
+    const phone = detectPhone(cell);
+
+    if (phone && !detectedPhones.includes(phone)) {
+      detectedPhones.push(phone);
     }
 
     if (!detectedDob) {
@@ -272,13 +391,22 @@ export function buildCleanPersonRow(person) {
 
   const extras = [];
 
+  // Second pass: collect only real extra values.
+  // Phones, DOBs, and fake labels should not become Title columns.
   values.forEach((cell, index) => {
     const text = normalizeValue(cell);
     if (!text) return;
 
-    if (index === 0) return; // first column reserved as Name
+    if (index === 0) return;
 
-    if (detectedPhone && normalizePhone(text) === detectedPhone) return;
+    if (isIgnoredLabelValue(text)) {
+      return;
+    }
+
+    const normalizedPhone = normalizePhone(text);
+    if (normalizedPhone && detectedPhones.includes(normalizedPhone)) {
+      return;
+    }
 
     const parsedDob = detectDOB(text);
     if (
@@ -289,14 +417,19 @@ export function buildCleanPersonRow(person) {
       return;
     }
 
-    extras.push(text);
+    if (!isDuplicateByValue(extras, text)) {
+      extras.push(text);
+    }
   });
 
   const cleanedRow = {
     Name: originalName,
     "Date of Birth": detectedDob ? formatDateDDMMYYYY(detectedDob) : "",
-    "Phone Number": detectedPhone || "",
   };
+
+  detectedPhones.forEach((phone, index) => {
+    cleanedRow[`Phone Number ${index + 1}`] = phone;
+  });
 
   extras.forEach((value, index) => {
     cleanedRow[`Title ${index + 1}`] = value;
@@ -304,7 +437,8 @@ export function buildCleanPersonRow(person) {
 
   return {
     cleanedRow,
-    detectedPhone,
+    detectedPhone: detectedPhones.length > 0 ? detectedPhones[0] : null,
+    detectedPhones,
     detectedDob,
   };
 }
@@ -312,23 +446,36 @@ export function buildCleanPersonRow(person) {
 /* ---------- EXPORT / PREVIEW HEADERS ---------- */
 
 export function collectCleanHeaders(data) {
+  let maxPhoneColumns = 1;
   let maxExtraColumns = 0;
 
   (data || []).forEach((row) => {
     const keys = Object.keys(row || {});
-    const extraCount = keys.filter(
-      (key) =>
-        key !== "Name" &&
-        key !== "Date of Birth" &&
-        key !== "Phone Number"
-    ).length;
 
-    if (extraCount > maxExtraColumns) {
-      maxExtraColumns = extraCount;
+    const phoneNumbers = keys
+      .filter((key) => key.startsWith("Phone Number "))
+      .map((key) => parseInt(key.replace("Phone Number ", ""), 10))
+      .filter((number) => !Number.isNaN(number));
+
+    if (phoneNumbers.length > 0) {
+      maxPhoneColumns = Math.max(maxPhoneColumns, Math.max(...phoneNumbers));
+    }
+
+    const extraNumbers = keys
+      .filter((key) => key.startsWith("Title "))
+      .map((key) => parseInt(key.replace("Title ", ""), 10))
+      .filter((number) => !Number.isNaN(number));
+
+    if (extraNumbers.length > 0) {
+      maxExtraColumns = Math.max(maxExtraColumns, Math.max(...extraNumbers));
     }
   });
 
-  const headers = ["Name", "Date of Birth", "Phone Number"];
+  const headers = ["Name", "Date of Birth"];
+
+  for (let i = 1; i <= maxPhoneColumns; i++) {
+    headers.push(`Phone Number ${i}`);
+  }
 
   for (let i = 1; i <= maxExtraColumns; i++) {
     headers.push(`Title ${i}`);
@@ -349,7 +496,9 @@ export function createSheetFromData(data, headers) {
       : collectCleanHeaders(rows);
 
   if (rows.length === 0) {
-    return XLSX.utils.aoa_to_sheet([finalHeaders]);
+    const emptySheet = XLSX.utils.aoa_to_sheet([finalHeaders]);
+    applyYellowHeaderStyle(emptySheet, finalHeaders);
+    return emptySheet;
   }
 
   const normalizedRows = rows.map((row) => {
@@ -360,5 +509,39 @@ export function createSheetFromData(data, headers) {
     return next;
   });
 
-  return XLSX.utils.json_to_sheet(normalizedRows, { header: finalHeaders });
+  const sheet = XLSX.utils.json_to_sheet(normalizedRows, {
+    header: finalHeaders,
+  });
+
+  applyYellowHeaderStyle(sheet, finalHeaders);
+
+  return sheet;
+}
+
+function applyYellowHeaderStyle(sheet, headers) {
+  if (!sheet || !Array.isArray(headers)) return;
+
+  headers.forEach((header, index) => {
+    const cellAddress = XLSX.utils.encode_cell({
+      r: 0,
+      c: index,
+    });
+
+    if (!sheet[cellAddress]) return;
+
+    sheet[cellAddress].s = {
+      fill: {
+        patternType: "solid",
+        fgColor: { rgb: "FFFF00" },
+      },
+      font: {
+        bold: true,
+        color: { rgb: "000000" },
+      },
+    };
+  });
+
+  sheet["!cols"] = headers.map((header) => ({
+    wch: Math.max(14, String(header).length + 3),
+  }));
 }

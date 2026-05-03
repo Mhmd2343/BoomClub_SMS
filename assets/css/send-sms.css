@@ -327,6 +327,83 @@
   padding: 24px;
 }
 
+
+
+
+.hidden {
+  display: none !important;
+}
+
+.sms-mode-chooser {
+  min-height: 55vh;
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: stretch;
+}
+
+.sms-mode-card {
+  width: 100%;
+  min-height: 320px;
+  border: 2px solid #FFE08A;
+  border-radius: 24px;
+  background: #FFF8E1;
+  color: #A61B1B;
+  cursor: pointer;
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  transition: 0.25s ease;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.06);
+}
+
+.sms-mode-card:hover {
+  transform: translateY(-5px);
+  border-color: #D62828;
+  background: #FFECC2;
+  box-shadow: 0 18px 42px rgba(214, 40, 40, 0.13);
+}
+
+.sms-mode-icon {
+  font-size: 58px;
+  line-height: 1;
+}
+
+.sms-mode-card strong {
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.sms-mode-card small {
+  max-width: 420px;
+  color: #5C3A00;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.sms-mode-panel {
+  margin-top: 24px;
+}
+
+.sms-back-btn {
+  margin-bottom: 18px;
+  background: #FFF8E1;
+  color: #A61B1B;
+  border: 1px solid #FFE08A;
+}
+
+.sms-back-btn:hover {
+  background: #FFECC2;
+}
+
+
+
+
 @media (max-width: 1100px) {
   .sms-month-count-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -344,6 +421,16 @@
 
   .sms-time-grid {
     grid-template-columns: 1fr;
+  }
+
+
+
+  .sms-mode-chooser {
+    grid-template-columns: 1fr;
+  }
+
+  .sms-mode-card {
+    min-height: 240px;
   }
 }
 
@@ -366,3 +453,4 @@
     width: 100%;
   }
 }
+

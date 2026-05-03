@@ -1,4 +1,10 @@
-import { createSheetFromData, getOrderedMonths } from "./utils.js";
+import {
+  buildCleanPersonRow,
+  collectCleanHeaders,
+  createSheetFromData,
+  getOrderedMonths,
+} from "./utils.js";
+
 
 export function downloadGroupedWorkbook(
   processedData,
@@ -93,6 +99,50 @@ function parseMonthDayKey(value) {
 }
 
 function sanitizeSheetName(name) {
+  return String(name || "Sheet")
+    .replace(/[\\/?*[\]:]/g, "")
+    .slice(0, 31);
+}
+
+
+export function downloadCleanedOriginalWorkbook(
+  sourceFiles = [],
+  customFileName = "BoomClub_To_Fix_Date_Of_Birth.xlsx"
+) {
+  const newWorkbook = XLSX.utils.book_new();
+
+  sourceFiles.forEach((sourceFile, fileIndex) => {
+    const sheets = Array.isArray(sourceFile.sheets) ? sourceFile.sheets : [];
+
+    sheets.forEach((sheet, sheetIndex) => {
+      const rows = Array.isArray(sheet.rows) ? sheet.rows : [];
+
+      const cleanedRows = rows.map((person) => {
+        const { cleanedRow } = buildCleanPersonRow(person);
+        return cleanedRow;
+      });
+
+      const headers = collectCleanHeaders(cleanedRows);
+      const worksheet = createSheetFromData(cleanedRows, headers);
+
+      let sheetName = sheet.sheetName || `Sheet ${sheetIndex + 1}`;
+
+      if (sourceFiles.length > 1) {
+        sheetName = `${fileIndex + 1}-${sheetName}`;
+      }
+
+      XLSX.utils.book_append_sheet(
+        newWorkbook,
+        worksheet,
+        sanitizeSheetNameForExport(sheetName)
+      );
+    });
+  });
+
+  XLSX.writeFile(newWorkbook, customFileName);
+}
+
+function sanitizeSheetNameForExport(name) {
   return String(name || "Sheet")
     .replace(/[\\/?*[\]:]/g, "")
     .slice(0, 31);

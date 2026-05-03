@@ -5,16 +5,22 @@ import {
   getMonthName,
   getTotalPeopleCount,
   readFileAsArrayBuffer,
+  sortRowsWithPhonesFirst,
 } from "../utils.js";
 import {
   saveMonthHistory,
   getEditDraft,
   clearEditDraft,
 } from "../storage.js";
-import { downloadGroupedWorkbook } from "../exportExcel.js";
+import {
+  downloadGroupedWorkbook,
+  downloadCleanedOriginalWorkbook,
+} from "../exportExcel.js";
+
 import { openFilePreview } from "../previewModal.js";
 
 let latestGroupedByMonth = null;
+let latestCleanOriginalSourceFiles = [];
 let latestFileName = "";
 let selectedFiles = [];
 
@@ -74,6 +80,10 @@ function restoreEditDraftIfAvailable() {
   }
 
   selectedFiles = Array.isArray(editDraft.sourceFiles)
+    ? editDraft.sourceFiles.map(cloneStoredSourceFile)
+    : [];
+
+  latestCleanOriginalSourceFiles = Array.isArray(editDraft.sourceFiles)
     ? editDraft.sourceFiles.map(cloneStoredSourceFile)
     : [];
 
@@ -257,28 +267,37 @@ async function handleFile() {
       groupedByMonth[monthName].push(cleanedRow);
     });
 
-    const allCleanRows = [
-      ...Object.values(groupedByMonth).flat(),
-      ...notSpecifiedPeople,
-    ];
-    const headers = collectCleanHeaders(allCleanRows);
+const sortedNotSpecifiedPeople = sortRowsWithPhonesFirst(notSpecifiedPeople);
 
-    latestGroupedByMonth = {
-      groupedByMonth,
-      notSpecifiedPeople,
-      headers,
-    };
+notSpecifiedPeople.length = 0;
+notSpecifiedPeople.push(...sortedNotSpecifiedPeople);
 
-    saveMonthHistory({
-      fileName: latestFileName,
-      groupedByMonth,
-      notSpecifiedPeople,
-      headers,
-      sourceFiles,
-    });
+const allCleanRows = [
+  ...Object.values(groupedByMonth).flat(),
+  ...notSpecifiedPeople,
+];
 
-    displayResults(groupedByMonth, latestFileName, notSpecifiedPeople.length);
-  } catch (error) {
+const headers = collectCleanHeaders(allCleanRows);
+
+latestGroupedByMonth = {
+  groupedByMonth,
+  notSpecifiedPeople,
+  headers,
+};
+
+latestCleanOriginalSourceFiles = sourceFiles;
+
+saveMonthHistory({
+  fileName: latestFileName,
+  groupedByMonth,
+  notSpecifiedPeople,
+  headers,
+  sourceFiles,
+});
+
+displayResults(groupedByMonth, latestFileName, notSpecifiedPeople.length);
+
+} catch (error) {
     console.error("Error processing files:", error);
     output.innerHTML =
       "<p>Something went wrong while processing the uploaded files.</p>";
@@ -326,24 +345,46 @@ function displayResults(groupedByMonth, fileName = "", notSpecifiedCount = 0) {
     return;
   }
 
-  const totalPeople = getTotalPeopleCount(groupedByMonth) + notSpecifiedCount;
-  const finalFileName = `BoomClub_Birthdays_By_Month (${totalPeople}).xlsx`;
+const totalPeople = getTotalPeopleCount(groupedByMonth) + notSpecifiedCount;
 
-  const downloadBtn = document.createElement("button");
-  downloadBtn.id = "downloadBtn";
-  downloadBtn.type = "button";
-  downloadBtn.textContent = "Download XLSX File";
+const toFixFileName = `BoomClub_To_Fix_Date_Of_Birth (${totalPeople}).xlsx`;
+const filteredMonthFileName = `BoomClub_Filtered_By_Month (${totalPeople}).xlsx`;
 
-  downloadBtn.addEventListener("click", () => {
-    if (!latestGroupedByMonth) {
-      alert("No processed data available to download.");
-      return;
-    }
+const buttonsWrapper = document.createElement("div");
+buttonsWrapper.className = "download-buttons-wrapper";
 
-    downloadGroupedWorkbook(latestGroupedByMonth, finalFileName);
-  });
+const downloadToFixBtn = document.createElement("button");
+downloadToFixBtn.id = "downloadToFixBtn";
+downloadToFixBtn.type = "button";
+downloadToFixBtn.textContent = "Download To-Fix Date of Birth";
 
-  output.appendChild(downloadBtn);
+downloadToFixBtn.addEventListener("click", () => {
+  if (!latestCleanOriginalSourceFiles || latestCleanOriginalSourceFiles.length === 0) {
+    alert("No original cleaned data available to download.");
+    return;
+  }
+
+  downloadCleanedOriginalWorkbook(latestCleanOriginalSourceFiles, toFixFileName);
+});
+
+const downloadFilteredMonthBtn = document.createElement("button");
+downloadFilteredMonthBtn.id = "downloadFilteredMonthBtn";
+downloadFilteredMonthBtn.type = "button";
+downloadFilteredMonthBtn.textContent = "Download Filtered Month";
+
+downloadFilteredMonthBtn.addEventListener("click", () => {
+  if (!latestGroupedByMonth) {
+    alert("No processed monthly data available to download.");
+    return;
+  }
+
+  downloadGroupedWorkbook(latestGroupedByMonth, filteredMonthFileName);
+});
+
+buttonsWrapper.appendChild(downloadToFixBtn);
+buttonsWrapper.appendChild(downloadFilteredMonthBtn);
+
+output.appendChild(buttonsWrapper);
 }
 
 function clearPage() {
@@ -358,9 +399,10 @@ function clearPage() {
   if (selectedFileContainer) selectedFileContainer.innerHTML = "";
   if (output) output.innerHTML = "";
 
-  selectedFiles = [];
-  latestGroupedByMonth = null;
-  latestFileName = "";
+selectedFiles = [];
+latestGroupedByMonth = null;
+latestCleanOriginalSourceFiles = [];
+latestFileName = "";
 
   clearEditDraft();
 }

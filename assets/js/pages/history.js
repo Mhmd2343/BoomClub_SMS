@@ -2,6 +2,7 @@ import {
   clearAllHistory,
   getMonthHistory,
   getDateHistory,
+  getSendSmsHistory,
   saveEditDraft,
 } from "../storage.js";
 import {
@@ -14,6 +15,7 @@ import { formatFullDateTime, getMinutesAgoText } from "../utils.js";
 export function initHistoryPage() {
   renderMonthHistory();
   renderDateHistory();
+  renderSendSmsHistory();
   bindHistoryEvents();
   showHistoryHome();
 }
@@ -24,6 +26,8 @@ function bindHistoryEvents() {
   const showDateHistoryBtn = document.getElementById("showDateHistoryBtn");
   const backToHistoryHomeFromMonth = document.getElementById("backToHistoryHomeFromMonth");
   const backToHistoryHomeFromDate = document.getElementById("backToHistoryHomeFromDate");
+  const showSendSmsHistoryBtn = document.getElementById("showSendSmsHistoryBtn");
+  const backToHistoryHomeFromSendSms = document.getElementById("backToHistoryHomeFromSendSms");
 
   if (clearHistoryBtn) {
     clearHistoryBtn.addEventListener("click", clearHistory);
@@ -44,36 +48,62 @@ function bindHistoryEvents() {
   if (backToHistoryHomeFromDate) {
     backToHistoryHomeFromDate.addEventListener("click", showHistoryHome);
   }
+
+  if (showSendSmsHistoryBtn) {
+  showSendSmsHistoryBtn.addEventListener("click", showSendSmsHistoryView);
+}
+
+if (backToHistoryHomeFromSendSms) {
+  backToHistoryHomeFromSendSms.addEventListener("click", showHistoryHome);
+}
 }
 
 function showHistoryHome() {
   const homeView = document.getElementById("historyHomeView");
   const monthView = document.getElementById("monthHistoryView");
   const dateView = document.getElementById("dateHistoryView");
+  const sendSmsView = document.getElementById("sendSmsHistoryView");
 
   if (homeView) homeView.classList.remove("hidden");
   if (monthView) monthView.classList.add("hidden");
   if (dateView) dateView.classList.add("hidden");
+  if (sendSmsView) sendSmsView.classList.add("hidden");
 }
 
 function showMonthHistoryView() {
   const homeView = document.getElementById("historyHomeView");
   const monthView = document.getElementById("monthHistoryView");
   const dateView = document.getElementById("dateHistoryView");
+  const sendSmsView = document.getElementById("sendSmsHistoryView");
 
   if (homeView) homeView.classList.add("hidden");
   if (monthView) monthView.classList.remove("hidden");
   if (dateView) dateView.classList.add("hidden");
+  if (sendSmsView) sendSmsView.classList.add("hidden");
 }
 
 function showDateHistoryView() {
   const homeView = document.getElementById("historyHomeView");
   const monthView = document.getElementById("monthHistoryView");
   const dateView = document.getElementById("dateHistoryView");
+  const sendSmsView = document.getElementById("sendSmsHistoryView");
 
   if (homeView) homeView.classList.add("hidden");
   if (monthView) monthView.classList.add("hidden");
   if (dateView) dateView.classList.remove("hidden");
+  if (sendSmsView) sendSmsView.classList.add("hidden");
+}
+
+function showSendSmsHistoryView() {
+  const homeView = document.getElementById("historyHomeView");
+  const monthView = document.getElementById("monthHistoryView");
+  const dateView = document.getElementById("dateHistoryView");
+  const sendSmsView = document.getElementById("sendSmsHistoryView");
+
+  if (homeView) homeView.classList.add("hidden");
+  if (monthView) monthView.classList.add("hidden");
+  if (dateView) dateView.classList.add("hidden");
+  if (sendSmsView) sendSmsView.classList.remove("hidden");
 }
 
 function renderMonthHistory() {
@@ -127,6 +157,35 @@ function renderDateHistory() {
 
   history.forEach((item) => {
     list.appendChild(createHistoryCard(item, "date"));
+  });
+
+  container.appendChild(list);
+}
+
+
+function renderSendSmsHistory() {
+  const container = document.getElementById("historySendSmsContent");
+  const history = getSendSmsHistory();
+
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (history.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <strong>No SMS history yet.</strong>
+        <p>Your scheduled or sent SMS actions will appear here.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const list = document.createElement("div");
+  list.className = "history-list";
+
+  history.forEach((item) => {
+    list.appendChild(createSendSmsHistoryCard(item));
   });
 
   container.appendChild(list);
@@ -212,6 +271,83 @@ function createHistoryCard(item, mode) {
 
   card.appendChild(cardMain);
   card.appendChild(actions);
+
+  return card;
+}
+
+function createSendSmsHistoryCard(item) {
+  const card = document.createElement("div");
+  card.className = "history-file-card sms-history-card";
+
+  const modeLabel = item.mode === "sendNow" ? "Send Right Now" : "Scheduled";
+
+  const recipients = Array.isArray(item.recipients) ? item.recipients : [];
+  const selectedMonths = Array.isArray(item.selectedMonths)
+    ? item.selectedMonths.join(", ")
+    : "Not specified";
+
+  const recipientsPreview = recipients.length
+    ? recipients
+        .map((recipient) => {
+          if (typeof recipient === "string") {
+            return `<li><strong>${escapeHtml(recipient)}</strong></li>`;
+          }
+
+          return `
+            <li>
+              <strong>${escapeHtml(recipient.name || "Unknown")}</strong>
+              <span>${escapeHtml(recipient.phone || "")}</span>
+              <small>
+                ${escapeHtml(recipient.month || "")}
+                ${
+                  recipient.dateOfBirth
+                    ? ` | DOB: ${escapeHtml(recipient.dateOfBirth)}`
+                    : ""
+                }
+                ${
+                  recipient.reminderDate
+                    ? ` | Reminder: ${escapeHtml(recipient.reminderDate)}`
+                    : ""
+                }
+              </small>
+            </li>
+          `;
+        })
+        .join("")
+    : `<li>No recipients saved.</li>`;
+
+  card.innerHTML = `
+    <div class="history-datetime">${escapeHtml(formatFullDateTime(item.createdAt))}</div>
+
+    ${
+      getMinutesAgoText(item.createdAt)
+        ? `<div class="history-minutes-ago">${escapeHtml(
+            getMinutesAgoText(item.createdAt)
+          )}</div>`
+        : ""
+    }
+
+    <div class="history-title">
+      ${escapeHtml(modeLabel)} SMS
+    </div>
+
+    <div class="sms-history-details">
+      <p><strong>File:</strong> ${escapeHtml(item.fileName || "Not specified")}</p>
+      <p><strong>Selected month(s):</strong> ${escapeHtml(selectedMonths)}</p>
+      <p><strong>From:</strong> ${escapeHtml(item.fromNumber || "Not specified")}</p>
+      <p><strong>Send date:</strong> ${escapeHtml(item.sendDateLabel || "Not specified")}</p>
+      <p><strong>Send time:</strong> ${escapeHtml(item.sendTimeLabel || "Not specified")}</p>
+      <p><strong>Message:</strong> ${escapeHtml(item.messageText || "No message text saved.")}</p>
+      <p><strong>Total recipients:</strong> ${recipients.length}</p>
+    </div>
+
+    <div class="sms-history-recipients">
+      <strong>Recipients</strong>
+      <ul>
+        ${recipientsPreview}
+      </ul>
+    </div>
+  `;
 
   return card;
 }
@@ -372,6 +508,19 @@ function navigateToPage(pageName) {
   alert("Edit draft loaded. Open the target page to continue.");
 }
 
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+
+
+
 function clearHistory() {
   const confirmed = confirm("Are you sure you want to delete all history?");
   if (!confirmed) return;
@@ -379,5 +528,6 @@ function clearHistory() {
   clearAllHistory();
   renderMonthHistory();
   renderDateHistory();
+  renderSendSmsHistory();
   alert("History cleared successfully.");
 }

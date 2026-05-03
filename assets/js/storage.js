@@ -108,18 +108,28 @@ export function clearEditDraft() {
 
 
 export function saveSendSmsHistory({
+  mode = "scheduled",
+  fileName = "",
+  selectedMonths = [],
   fromNumber,
-  recipients,
-  messageText,
+  recipients = [],
+  messageText = "",
+  sendDateLabel = "",
+  sendTimeLabel = "",
 }) {
   const history = getHistory();
 
   const historyItem = {
     id: generateId(),
     type: "sendSms",
+    mode,
+    fileName,
+    selectedMonths,
     fromNumber,
-    recipients, // array of numbers
+    recipients,
     messageText,
+    sendDateLabel,
+    sendTimeLabel,
     createdAt: new Date().toISOString(),
   };
 

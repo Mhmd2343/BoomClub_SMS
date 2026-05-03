@@ -1,6 +1,7 @@
 import { openFilePreview, openStoredFilesPreview } from "../previewModal.js";
 import { saveSendSmsHistory } from "../storage.js";
 
+
 const REQUIRED_SHEETS = [
   "january",
   "february",
@@ -34,6 +35,16 @@ export function initSendSmsPage() {
   const fileInput = document.getElementById("smsFileInput");
   const processBtn = document.getElementById("processSmsFileBtn");
 
+  const modeChooser = document.getElementById("smsModeChooser");
+  const schedulePanel = document.getElementById("smsSchedulePanel");
+  const sendNowPanel = document.getElementById("smsSendNowPanel");
+
+  const scheduleModeBtn = document.getElementById("smsScheduleModeBtn");
+  const sendNowModeBtn = document.getElementById("smsSendNowModeBtn");
+
+  const backToSmsModesBtn = document.getElementById("backToSmsModesBtn");
+  const backToSmsModesFromNowBtn = document.getElementById("backToSmsModesFromNowBtn");
+
   if (fileInput) {
     fileInput.addEventListener("change", handleSmsFileSelection);
   }
@@ -41,6 +52,52 @@ export function initSendSmsPage() {
   if (processBtn) {
     processBtn.addEventListener("click", handleProcessSmsFiles);
   }
+
+  if (scheduleModeBtn) {
+    scheduleModeBtn.addEventListener("click", () => {
+      showSmsMode("schedule");
+    });
+  }
+
+  if (sendNowModeBtn) {
+    sendNowModeBtn.addEventListener("click", () => {
+      showSmsMode("sendNow");
+    });
+  }
+
+  if (backToSmsModesBtn) {
+    backToSmsModesBtn.addEventListener("click", () => {
+      showSmsMode("chooser");
+    });
+  }
+
+  if (backToSmsModesFromNowBtn) {
+    backToSmsModesFromNowBtn.addEventListener("click", () => {
+      showSmsMode("chooser");
+    });
+  }
+
+  function showSmsMode(mode) {
+    if (modeChooser) modeChooser.classList.add("hidden");
+    if (schedulePanel) schedulePanel.classList.add("hidden");
+    if (sendNowPanel) sendNowPanel.classList.add("hidden");
+
+    if (mode === "schedule" && schedulePanel) {
+      schedulePanel.classList.remove("hidden");
+      return;
+    }
+
+    if (mode === "sendNow" && sendNowPanel) {
+      sendNowPanel.classList.remove("hidden");
+      return;
+    }
+
+    if (modeChooser) {
+      modeChooser.classList.remove("hidden");
+    }
+  }
+
+  showSmsMode("chooser");
 
   renderSelectedSmsFiles();
   clearSmsError();
@@ -675,33 +732,47 @@ function renderSmsReport(rows, filesCount = 1) {
         return;
       }
 
-      const recipients = getUniqueRecipients(selectedRows);
-      if (recipients.length === 0) {
-        showSendSmsInlineError(
-          "No valid phone numbers were found inside the selected month(s)."
-        );
-        return;
-      }
+const detailedRecipients = getDetailedRecipients(selectedRows);
+if (detailedRecipients.length === 0) {
+  showSendSmsInlineError(
+    "No valid phone numbers were found inside the selected month(s)."
+  );
+  return;
+}
 
-      clearSendSmsInlineError();
+clearSendSmsInlineError();
 
-      const confirmed = confirm(
-        `Are you sure you want to send SMS messages for ${selectedRows.length} selected row(s) across ${selectedSmsMonths.size} month(s)?`
-      );
-      if (!confirmed) return;
+const confirmed = confirm(
+  `Are you sure you want to schedule SMS messages for ${selectedRows.length} selected row(s) across ${selectedSmsMonths.size} month(s)?`
+);
+if (!confirmed) return;
 
-      const smsTextArea = document.getElementById("smsTextArea");
-      const messageText = smsTextArea ? smsTextArea.value.trim() : "";
+const smsTextArea = document.getElementById("smsTextArea");
+const messageText = smsTextArea ? smsTextArea.value.trim() : "";
 
-      const fromNumber = "+96170000000"; // replace later with your real connected number
+const hourInput = document.getElementById("smsHourInput");
+const minuteInput = document.getElementById("smsMinuteInput");
 
-      saveSendSmsHistory({
-        fromNumber,
-        recipients,
-        messageText,
-      });
+const hour = hourInput ? hourInput.value.trim().padStart(2, "0") : "19";
+const minute = minuteInput ? minuteInput.value.trim().padStart(2, "0") : "00";
 
-      alert("SMS send action for selected month(s) was saved in history successfully.");
+const fromNumber = "+96170000000"; // replace later with your real connected number
+
+saveSendSmsHistory({
+  mode: "scheduled",
+  fileName:
+    selectedSmsFiles.length === 1
+      ? selectedSmsFiles[0].name
+      : `${selectedSmsFiles.length} files merged`,
+  selectedMonths: [...selectedSmsMonths].map(toDisplaySheetName),
+  fromNumber,
+  recipients: detailedRecipients,
+  messageText,
+  sendDateLabel: "One month before each selected birthday",
+  sendTimeLabel: `${hour}:${minute}`,
+});
+
+alert("Scheduled SMS action was saved in history successfully.");
     });
   }
 }
@@ -871,6 +942,19 @@ function getFilteredSmsRows() {
   }
 
   return latestSmsRows.filter((row) => selectedSmsMonths.has(row.sheetName));
+}
+
+function getDetailedRecipients(rows) {
+  return rows
+    .map((row) => ({
+      name: row.name || "Unknown",
+      phone: normalizeValue(row.phone),
+      month: toDisplaySheetName(row.sheetName || ""),
+      dateOfBirth: row.originalDobLabel || "",
+      reminderDate: row.reminderDateLabel || "",
+      sourceFileName: row.sourceFileName || "",
+    }))
+    .filter((recipient) => recipient.phone);
 }
 
 function getUniqueRecipients(rows) {

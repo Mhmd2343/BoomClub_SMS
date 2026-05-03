@@ -19,6 +19,11 @@
       <button id="showDateHistoryBtn" class="history-choice-btn" type="button">
         Filter by Date
       </button>
+
+      <button id="showSendSmsHistoryBtn" class="history-choice-btn" type="button">
+  Send SMS
+</button>
+
     </div>
 
     <div id="monthHistoryView" class="history-detail-view hidden">
@@ -44,5 +49,17 @@
       <p>Previously processed exact-date Excel results.</p>
       <div id="historyDateContent"></div>
     </div>
+
+    <div id="sendSmsHistoryView" class="history-detail-view hidden">
+  <div class="history-section-header">
+    <h2>Send SMS History</h2>
+    <button id="backToHistoryHomeFromSendSms" class="back-history-btn" type="button">
+      Back
+    </button>
+  </div>
+
+  <p>Previously scheduled or sent SMS actions.</p>
+  <div id="historySendSmsContent"></div>
+</div>
   </div>
 </section>

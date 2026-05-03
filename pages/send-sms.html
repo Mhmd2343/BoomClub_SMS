@@ -4,28 +4,71 @@
       <div>
         <h1>Send SMS</h1>
         <p>
-          Upload a generated monthly workbook and review the reminder schedule
-          before SMS sending.
+          Choose whether you want to schedule birthday reminders or send messages immediately.
         </p>
       </div>
     </div>
 
-    <div class="send-sms-upload-box">
-      <label class="send-sms-label" for="smsFileInput">
-        Upload Excel file (.xlsx only)
-      </label>
+    <!-- FIRST SCREEN -->
+    <div id="smsModeChooser" class="sms-mode-chooser">
+      <button id="smsScheduleModeBtn" type="button" class="sms-mode-card">
+        <span class="sms-mode-icon">📅</span>
+        <strong>Schedule</strong>
+        <small>
+          Upload the generated monthly workbook and prepare SMS reminders one month in advance.
+        </small>
+      </button>
 
-      <input type="file" id="smsFileInput" accept=".xlsx" multiple />
-
-      <div id="smsSelectedFile" class="sms-selected-file"></div>
-
-      <div id="smsErrorLabel" class="sms-error-label" aria-live="polite"></div>
-
-      <button id="processSmsFileBtn" type="button">
-        Process File
+      <button id="smsSendNowModeBtn" type="button" class="sms-mode-card">
+        <span class="sms-mode-icon">⚡</span>
+        <strong>Send Right Now</strong>
+        <small>
+          Send an SMS immediately without using the one-month reminder schedule.
+        </small>
       </button>
     </div>
 
-    <div id="smsReportContainer" class="sms-report-container"></div>
+    <!-- EXISTING SCHEDULE FLOW -->
+    <div id="smsSchedulePanel" class="sms-mode-panel hidden">
+      <button id="backToSmsModesBtn" type="button" class="sms-back-btn">
+        ← Back
+      </button>
+
+      <div class="send-sms-upload-box">
+        <label class="send-sms-label" for="smsFileInput">
+          Upload Excel file (.xlsx only)
+        </label>
+
+        <input type="file" id="smsFileInput" accept=".xlsx" multiple />
+
+        <div id="smsSelectedFile" class="sms-selected-file"></div>
+
+        <div id="smsErrorLabel" class="sms-error-label" aria-live="polite"></div>
+
+        <button id="processSmsFileBtn" type="button">
+          Process File
+        </button>
+      </div>
+
+      <div id="smsReportContainer" class="sms-report-container"></div>
+    </div>
+
+    <!-- SEND RIGHT NOW FLOW - EMPTY FOR NEXT STEP -->
+    <div id="smsSendNowPanel" class="sms-mode-panel hidden">
+      <button id="backToSmsModesFromNowBtn" type="button" class="sms-back-btn">
+        ← Back
+      </button>
+
+      <div class="sms-summary-box">
+        <h2>Send Right Now</h2>
+        <p>
+          This section will be used for immediate SMS sending.
+        </p>
+        <p class="sms-summary-note">
+          Next step: we will decide if this should upload a file, choose people manually,
+          or type phone numbers directly.
+        </p>
+      </div>
+    </div>
   </div>
 </section>

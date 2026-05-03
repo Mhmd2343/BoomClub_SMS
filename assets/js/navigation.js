@@ -65,7 +65,9 @@ export async function loadPage(pageName) {
   if (!config) return;
 
   try {
-    const response = await fetch(config.htmlPath);
+const response = await fetch(`${config.htmlPath}?v=${Date.now()}`, {
+  cache: "no-store",
+});
     if (!response.ok) {
       throw new Error(`Failed to load page: ${pageName}`);
     }
