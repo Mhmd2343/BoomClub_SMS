@@ -1329,15 +1329,24 @@ function extractPhonesFromText(value) {
 
   const results = [];
 
-  const blockedText = text.toLowerCase();
-
   const phonePattern =
     /(?:\+?\s*961|00961)?[\s.\-/()]*\d{1,2}[\s.\-/()]*\d{3}[\s.\-/()]*\d{3,4}(?:[\s.\-/]*\d{1,4})?/g;
 
-  const matches = text.match(phonePattern) || [];
+  const directMatches = text.match(phonePattern) || [];
 
-  matches.forEach((match) => {
-    const normalized = normalizeLebanesePhone(match, blockedText);
+  directMatches.forEach((match) => {
+    const normalized = normalizeLebanesePhone(match);
+
+    if (normalized) {
+      addUniquePhone(results, normalized);
+    }
+  });
+
+  const compactMobilePattern = /\b(?:3|70|71|76|78|79|81)\d{6}\b/g;
+  const compactMobileMatches = text.match(compactMobilePattern) || [];
+
+  compactMobileMatches.forEach((match) => {
+    const normalized = normalizeLebanesePhone(match);
 
     if (normalized) {
       addUniquePhone(results, normalized);
@@ -1349,15 +1358,9 @@ function extractPhonesFromText(value) {
 
 function normalizeLebanesePhone(value, fullText = "") {
   let text = normalizeValue(value);
-
   if (!text) return "";
 
-  const lowerFullText = normalizeValue(fullText).toLowerCase();
-
-
-
   let digits = text.replace(/\D/g, "");
-
   if (!digits) return "";
 
   if (digits.startsWith("00961")) {
@@ -1366,30 +1369,27 @@ function normalizeLebanesePhone(value, fullText = "") {
 
   if (digits.startsWith("961")) {
     const localPart = digits.slice(3);
-
-    if (!isValidLebaneseLocalNumber(localPart)) {
-      return "";
-    }
-
+    if (!isValidLebaneseLocalNumber(localPart)) return "";
     return formatLebanesePhone(localPart);
   }
 
   if (digits.startsWith("0")) {
     const localPart = digits.slice(1);
-
-    if (!isValidLebaneseLocalNumber(localPart)) {
-      return "";
-    }
-
+    if (!isValidLebaneseLocalNumber(localPart)) return "";
     return formatLebanesePhone(localPart);
   }
 
-  if (isValidLebaneseLocalNumber(digits)) {
+  if (/^(3|70|71|76|78|79|81)\d{6}$/.test(digits)) {
+    return formatLebanesePhone(digits);
+  }
+
+  if (/^[1-9]\d{5,6}$/.test(digits)) {
     return formatLebanesePhone(digits);
   }
 
   return "";
 }
+
 
 function isValidLebaneseLocalNumber(localPart) {
   if (!/^\d+$/.test(localPart)) return false;
@@ -1410,11 +1410,7 @@ function isValidLebaneseLocalNumber(localPart) {
 }
 
 function formatLebanesePhone(localPart) {
-  if (localPart.length === 8) {
-    return `+ 961 ${localPart.slice(0, 2)}-${localPart.slice(2)}`;
-  }
-
-  return `+ 961 ${localPart.slice(0, 1)}-${localPart.slice(1)}`;
+  return `+ 961 ${localPart}`;
 }
 
 function removeExtractedPhonesFromText(value, phones) {
