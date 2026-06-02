@@ -29,6 +29,11 @@ const ORGANIZER_MODE_SEPARATE = "separate";
 const ORGANIZER_MODE_ALL_IN_ONE = "allInOne";
 const ORGANIZER_KEYWORDS_STORAGE_KEY = "fileFixerOrganizerCategories";
 
+const FILE_FIXER_OUTPUT_SEPARATE = "separate";
+const FILE_FIXER_OUTPUT_ONE_FILE = "oneFile";
+
+let selectedFileFixerOutputMode = FILE_FIXER_OUTPUT_SEPARATE;
+
 let selectedOrganizerMode = ORGANIZER_MODE_SEPARATE;
 
 let selectedFileFixerMainMode = "";
@@ -46,6 +51,8 @@ const processOrganizeFilterBtn = document.getElementById("processOrganizeFilterB
 const clearOrganizeFilterBtn = document.getElementById("clearOrganizeFilterBtn");
 const fileFixerBackBtn = document.getElementById("fileFixerBackBtn");
 const organizeFilterBackBtn = document.getElementById("organizeFilterBackBtn");
+const fileFixerSeparateFilesOutputBtn = document.getElementById("fileFixerSeparateFilesOutputBtn");
+const fileFixerOneFileOutputBtn = document.getElementById("fileFixerOneFileOutputBtn");
 const organizerSeparateFilesModeBtn = document.getElementById("organizerSeparateFilesModeBtn");
 const organizerAllInOneModeBtn = document.getElementById("organizerAllInOneModeBtn");
 
@@ -150,6 +157,33 @@ function updateFileFixerModeButtons() {
     selectedFileFixerMode === FILE_FIXER_MODE_ONE_SHEET
   );
 }
+
+
+fileFixerSeparateFilesOutputBtn?.addEventListener("click", () => {
+  selectedFileFixerOutputMode = FILE_FIXER_OUTPUT_SEPARATE;
+  updateFileFixerOutputButtons();
+});
+
+fileFixerOneFileOutputBtn?.addEventListener("click", () => {
+  selectedFileFixerOutputMode = FILE_FIXER_OUTPUT_ONE_FILE;
+  updateFileFixerOutputButtons();
+});
+
+updateFileFixerOutputButtons();
+
+function updateFileFixerOutputButtons() {
+  fileFixerSeparateFilesOutputBtn?.classList.toggle(
+    "active",
+    selectedFileFixerOutputMode === FILE_FIXER_OUTPUT_SEPARATE
+  );
+
+  fileFixerOneFileOutputBtn?.classList.toggle(
+    "active",
+    selectedFileFixerOutputMode === FILE_FIXER_OUTPUT_ONE_FILE
+  );
+}
+
+
 updateMainFileFixerMode();
   renderSelectedFileFixerFiles();
   clearFileFixerError();
@@ -540,10 +574,18 @@ const fixedResult =
   selectedFileFixerMode === FILE_FIXER_MODE_ONE_SHEET
     ? fixWorkbookIntoOneSheet(file, workbook)
     : fixWorkbook(file, workbook);
-          latestFileFixerResults.push(fixedResult);
+latestFileFixerResults.push(fixedResult);
 
-      downloadWorkbook(fixedResult.fixedWorkbook, fixedResult.fixedFileName);
+if (selectedFileFixerOutputMode === FILE_FIXER_OUTPUT_SEPARATE) {
+  downloadWorkbook(fixedResult.fixedWorkbook, fixedResult.fixedFileName);
+}
     }
+
+
+    if (selectedFileFixerOutputMode === FILE_FIXER_OUTPUT_ONE_FILE) {
+  const combinedWorkbook = buildCombinedFixedWorkbook(latestFileFixerResults);
+  downloadWorkbook(combinedWorkbook, "ALL_FIXED_FILES.xlsx");
+}
 
     renderFileFixerReport();
 } catch (error) {
@@ -1252,6 +1294,75 @@ function isSupportedSpreadsheetFile(fileName) {
 
 function downloadWorkbook(workbook, fileName) {
   XLSX.writeFile(workbook, fileName);
+}
+
+function buildCombinedFixedWorkbook(results) {
+  if (selectedFileFixerMode === FILE_FIXER_MODE_ONE_SHEET) {
+    return buildCombinedOneSheetFixedWorkbook(results);
+  }
+
+  return buildCombinedSameSheetsFixedWorkbook(results);
+}
+
+function buildCombinedSameSheetsFixedWorkbook(results) {
+  const combinedWorkbook = XLSX.utils.book_new();
+
+  results.forEach((result) => {
+    result.fixedWorkbook.SheetNames.forEach((sheetName) => {
+      const worksheet = result.fixedWorkbook.Sheets[sheetName];
+      if (!worksheet) return;
+
+      const finalSheetName = getUniqueWorkbookSheetName(combinedWorkbook, sheetName);
+      XLSX.utils.book_append_sheet(combinedWorkbook, worksheet, finalSheetName);
+    });
+  });
+
+  return combinedWorkbook;
+}
+
+function buildCombinedOneSheetFixedWorkbook(results) {
+  const allRows = [FIXED_HEADERS];
+
+  results.forEach((result) => {
+    const firstSheetName = result.fixedWorkbook.SheetNames[0];
+    const worksheet = result.fixedWorkbook.Sheets[firstSheetName];
+
+    if (!worksheet) return;
+
+    const rows = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1,
+      defval: "",
+      raw: true,
+    });
+
+    allRows.push(...rows.slice(1));
+  });
+
+  const cleanedRows = mergeRowsByPrimaryPhone(allRows.slice(1)).sort(sortFixedRows);
+  const finalRows = [FIXED_HEADERS, ...cleanedRows];
+
+  const combinedWorkbook = XLSX.utils.book_new();
+  const fixedSheet = XLSX.utils.aoa_to_sheet(finalRows);
+
+  styleFixedHeaderRow(fixedSheet);
+  fixedSheet["!cols"] = buildFixedColumnWidths();
+
+  XLSX.utils.book_append_sheet(combinedWorkbook, fixedSheet, "All Fixed Rows");
+
+  return combinedWorkbook;
+}
+
+function getUniqueWorkbookSheetName(workbook, sheetName) {
+  const baseName = safeSheetName(sheetName || "Sheet");
+  let finalName = baseName;
+  let counter = 2;
+
+  while (workbook.SheetNames.includes(finalName)) {
+    finalName = safeSheetName(`${baseName}_${counter}`);
+    counter++;
+  }
+
+  return finalName;
 }
 
 function buildErrorListHtml(messages) {
