@@ -45,7 +45,7 @@
 
       <div class="file-fixer-upload-box">
         <label class="file-fixer-label" for="fileFixerInput">
-          Upload Excel file (.xlsx only)
+          Upload Excel or CSV file
         </label>
 
 <input type="file" id="fileFixerInput" accept=".xlsx,.xls,.xlsm,.csv" multiple />
@@ -69,10 +69,26 @@
       <button id="organizeFilterBackBtn" type="button" class="file-fixer-back-btn">
   ← Back
 </button>
+
+
+<div class="file-fixer-mode-grid">
+  <button id="organizerSeparateFilesModeBtn" type="button" class="file-fixer-mode-card active">
+    <strong>Separate Files</strong>
+    <small>Each uploaded file returns its own organized workbook.</small>
+  </button>
+
+  <button id="organizerAllInOneModeBtn" type="button" class="file-fixer-mode-card">
+    <strong>All In One</strong>
+    <small>All uploaded files are organized into one single workbook.</small>
+  </button>
+</div>
+
       <div class="file-fixer-upload-box">
         <label class="file-fixer-label" for="organizeFilterInput">
-          Upload one messy Excel file (.xlsx only)
+          Upload Excel or CSV files
         </label>
+
+
 
 <input type="file" id="organizeFilterInput" accept=".xlsx,.xls,.xlsm,.csv" multiple />
 
@@ -81,8 +97,10 @@
         <div id="organizeFilterErrorLabel" class="file-fixer-error-label" aria-live="polite"></div>
 
         <button id="processOrganizeFilterBtn" type="button">
-          Organize and Filter File
+          Organize Files
         </button>
+
+
 
         <button id="clearOrganizeFilterBtn" type="button" class="file-fixer-clear-btn">
   Clear Files
@@ -90,6 +108,22 @@
 
 
       </div>
+              <div class="file-fixer-keywords-box">
+  <div class="file-fixer-keywords-header">
+    <div>
+      <h2>Current Keywords</h2>
+      <p>Add, edit, or delete organizer keywords used to create sheets.</p>
+    </div>
+  </div>
+
+  <div class="file-fixer-keyword-add-sheet-row">
+  <input id="newOrganizerSheetNameInput" type="text" placeholder="New sheet title, example: Suppliers" />
+  <input id="newOrganizerSheetKeywordsInput" type="text" placeholder="Keywords separated by comma" />
+  <button id="addOrganizerSheetBtn" type="button">Add Sheet</button>
+</div>
+
+  <div id="organizerKeywordsContainer" class="file-fixer-keywords-container"></div>
+</div>
     </div>
 
     <div id="fileFixerReportContainer" class="file-fixer-report-container"></div>

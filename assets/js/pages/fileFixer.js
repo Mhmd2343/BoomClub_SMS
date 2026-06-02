@@ -25,10 +25,17 @@ let selectedFileFixerMode = FILE_FIXER_MODE_SAME_SHEETS;
 const FILE_FIXER_MAIN_MODE_FIX = "fix";
 const FILE_FIXER_MAIN_MODE_ORGANIZE = "organize";
 
+const ORGANIZER_MODE_SEPARATE = "separate";
+const ORGANIZER_MODE_ALL_IN_ONE = "allInOne";
+const ORGANIZER_KEYWORDS_STORAGE_KEY = "fileFixerOrganizerCategories";
+
+let selectedOrganizerMode = ORGANIZER_MODE_SEPARATE;
+
 let selectedFileFixerMainMode = "";
 let selectedOrganizeFilterFiles = [];
 
 export function initFileFixerPage() {
+  
   const fileInput = document.getElementById("fileFixerInput");
   const processBtn = document.getElementById("processFileFixerBtn");
   const clearFileFixerBtn = document.getElementById("clearFileFixerBtn");
@@ -39,6 +46,22 @@ const processOrganizeFilterBtn = document.getElementById("processOrganizeFilterB
 const clearOrganizeFilterBtn = document.getElementById("clearOrganizeFilterBtn");
 const fileFixerBackBtn = document.getElementById("fileFixerBackBtn");
 const organizeFilterBackBtn = document.getElementById("organizeFilterBackBtn");
+const organizerSeparateFilesModeBtn = document.getElementById("organizerSeparateFilesModeBtn");
+const organizerAllInOneModeBtn = document.getElementById("organizerAllInOneModeBtn");
+
+
+function updateOrganizerModeButtons() {
+  organizerSeparateFilesModeBtn?.classList.toggle(
+    "active",
+    selectedOrganizerMode === ORGANIZER_MODE_SEPARATE
+  );
+
+  organizerAllInOneModeBtn?.classList.toggle(
+    "active",
+    selectedOrganizerMode === ORGANIZER_MODE_ALL_IN_ONE
+  );
+}
+
 
   if (fileInput) {
     fileInput.addEventListener("change", handleFileFixerFileSelection);
@@ -72,6 +95,23 @@ organizeFilterBackBtn?.addEventListener("click", () => {
   selectedFileFixerMainMode = "";
   updateMainFileFixerMode();
 });
+
+
+organizerSeparateFilesModeBtn?.addEventListener("click", () => {
+  selectedOrganizerMode = ORGANIZER_MODE_SEPARATE;
+  updateOrganizerModeButtons();
+});
+
+organizerAllInOneModeBtn?.addEventListener("click", () => {
+  selectedOrganizerMode = ORGANIZER_MODE_ALL_IN_ONE;
+  updateOrganizerModeButtons();
+});
+
+updateOrganizerModeButtons();
+renderOrganizerKeywords();
+
+const addOrganizerSheetBtn = document.getElementById("addOrganizerSheetBtn");
+addOrganizerSheetBtn?.addEventListener("click", addOrganizerSheetCategory);
 
   const sameSheetsModeBtn = document.getElementById("sameSheetsModeBtn");
 const oneSheetModeBtn = document.getElementById("oneSheetModeBtn");
@@ -272,12 +312,12 @@ async function handleProcessOrganizeFilterFile() {
   clearFileFixerReport();
 
   if (selectedOrganizeFilterFiles.length === 0) {
-    showOrganizeFilterError("Please upload at least one .xlsx file first.");
+    showOrganizeFilterError("Please upload at least one Excel or CSV file first.");
     return;
   }
 
   const invalidFiles = selectedOrganizeFilterFiles.filter(
-(file) => !isSupportedSpreadsheetFile(file.name)
+    (file) => !isSupportedSpreadsheetFile(file.name)
   );
 
   if (invalidFiles.length > 0) {
@@ -286,17 +326,25 @@ async function handleProcessOrganizeFilterFile() {
   }
 
   try {
+    const fileWorkbookPairs = [];
+
     for (const file of selectedOrganizeFilterFiles) {
       const fileData = await readFileAsArrayBuffer(file);
       const workbook = XLSX.read(fileData, { type: "array" });
 
-      const organizedWorkbook = organizeWorkbookByKeywords(workbook);
-
-      downloadWorkbook(
-        organizedWorkbook,
-        buildOrganizedFileName(file.name)
-      );
+      fileWorkbookPairs.push({ fileName: file.name, workbook });
     }
+
+    if (selectedOrganizerMode === ORGANIZER_MODE_ALL_IN_ONE) {
+      const combinedWorkbook = organizeMultipleWorkbooksByKeywords(fileWorkbookPairs);
+      downloadWorkbook(combinedWorkbook, "ALL_ORGANIZED_FILES.xlsx");
+      return;
+    }
+
+    fileWorkbookPairs.forEach(({ fileName, workbook }) => {
+      const organizedWorkbook = organizeWorkbookByKeywords(workbook, fileName);
+      downloadWorkbook(organizedWorkbook, buildOrganizedFileName(fileName));
+    });
   } catch (error) {
     console.error("Organizer failed:", error);
     showOrganizeFilterError(
@@ -1445,8 +1493,8 @@ function removeExtractedPhonesFromText(value, phones) {
 }
 
 
-const ORGANIZER_CATEGORIES = [
-  { sheetName: "Fournisseur", keywords: ["fournisseur", "supplier"] },
+const DEFAULT_ORGANIZER_CATEGORIES = [
+    { sheetName: "Fournisseur", keywords: ["fournisseur", "supplier"] },
   { sheetName: "Client", keywords: ["client", "old client", "old clients"] },
   { sheetName: "Ucmas", keywords: ["ucmas"] },
   { sheetName: "Acmas", keywords: ["acmas"] },
@@ -1506,75 +1554,85 @@ const ORGANIZER_CATEGORIES = [
   { sheetName: "August", keywords: ["august", "aout", "août"] },
 ];
 
-function organizeWorkbookByKeywords(workbook) {
+let organizerCategories = loadOrganizerCategories();  
+
+function organizeWorkbookByKeywords(workbook, sourceFileName = "") {
+  return organizeMultipleWorkbooksByKeywords([{ fileName: sourceFileName, workbook }]);
+}
+
+function organizeMultipleWorkbooksByKeywords(fileWorkbookPairs) {
   const organizedWorkbook = XLSX.utils.book_new();
   const groupedRows = new Map();
 
-  ORGANIZER_CATEGORIES.forEach((category) => {
+  organizerCategories.forEach((category) => {
     groupedRows.set(category.sheetName, []);
   });
 
   groupedRows.set("Uncategorized", []);
 
-  workbook.SheetNames.forEach((sheetName) => {
-    const worksheet = workbook.Sheets[sheetName];
-    if (!worksheet) return;
+  fileWorkbookPairs.forEach(({ fileName, workbook }) => {
+    workbook.SheetNames.forEach((sheetName) => {
+      const worksheet = workbook.Sheets[sheetName];
+      if (!worksheet) return;
 
-    const matrix = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-      defval: "",
-      raw: true,
-      blankrows: false,
-    });
+      const matrix = XLSX.utils.sheet_to_json(worksheet, {
+        header: 1,
+        defval: "",
+        raw: true,
+        blankrows: false,
+      });
 
-    if (matrix.length === 0) return;
+      if (matrix.length === 0) return;
 
-const headers = matrix[0].map((header, index) => {
-  const cleanHeader = normalizeValue(header);
+      const headers = matrix[0].map((header, index) => {
+        const cleanHeader = normalizeValue(header);
 
-  if (!cleanHeader) return `Column ${index + 1}`;
+        if (!cleanHeader) return `Column ${index + 1}`;
 
-  if (extractPhonesFromText(cleanHeader).length > 0) {
-    return `Column ${index + 1}`;
-  }
+        if (extractPhonesFromText(cleanHeader).length > 0) {
+          return `Column ${index + 1}`;
+        }
 
-  return cleanHeader;
-});
+        return cleanHeader;
+      });
 
-    const dataRows = matrix.slice(1);
+      const dataRows = matrix.slice(1);
 
-    dataRows.forEach((row) => {
-      if (isRowEmpty(row)) return;
-const normalizedRow = {};
-const phoneNumbers = [];
+      dataRows.forEach((row) => {
+        if (isRowEmpty(row)) return;
 
-headers.forEach((header, index) => {
-  const value = row[index] ?? "";
-  const phones = extractPhonesFromText(value);
+        const normalizedRow = {};
+        const phoneNumbers = [];
 
-  if (phones.length > 0) {
-    phones.forEach((phone) => {
-      addUniquePhone(phoneNumbers, phone);
-    });
+        headers.forEach((header, index) => {
+          const value = row[index] ?? "";
+          const phones = extractPhonesFromText(value);
 
-    normalizedRow[header] = removeExtractedPhonesFromText(value, phones);
-  } else {
-    normalizedRow[header] = value;
-  }
-});
+          if (phones.length > 0) {
+            phones.forEach((phone) => {
+              addUniquePhone(phoneNumbers, phone);
+            });
 
-normalizedRow["Phone Numbers"] = phoneNumbers.join(" | ");
-normalizedRow["Source Sheet"] = sheetName;
+            normalizedRow[header] = removeExtractedPhonesFromText(value, phones);
+          } else {
+            normalizedRow[header] = value;
+          }
+        });
 
-const matchedCategories = findMatchingOrganizerCategories(row, sheetName);
+        normalizedRow["Phone Numbers"] = phoneNumbers.join(" | ");
+        normalizedRow["Source File"] = fileName;
+        normalizedRow["Source Sheet"] = sheetName;
 
-      if (matchedCategories.length === 0) {
-        groupedRows.get("Uncategorized").push(normalizedRow);
-        return;
-      }
+        const matchedCategories = findMatchingOrganizerCategories(row, sheetName);
 
-      matchedCategories.forEach((categoryName) => {
-        groupedRows.get(categoryName).push(normalizedRow);
+        if (matchedCategories.length === 0) {
+          groupedRows.get("Uncategorized").push(normalizedRow);
+          return;
+        }
+
+        matchedCategories.forEach((categoryName) => {
+          groupedRows.get(categoryName).push(normalizedRow);
+        });
       });
     });
   });
@@ -1599,7 +1657,7 @@ function findMatchingOrganizerCategories(row, sourceSheetName = "") {
   const rowText = normalizeForKeywordSearch(`${sourceSheetName} ${row.join(" ")}`);
   const matches = [];
 
-  ORGANIZER_CATEGORIES.forEach((category) => {
+  organizerCategories.forEach((category) => {
     const hasMatch = category.keywords.some((keyword) => {
       const normalizedKeyword = normalizeForKeywordSearch(keyword);
       if (!normalizedKeyword) return false;
@@ -1654,7 +1712,7 @@ function collectOrganizerHeaders(rows) {
     });
   });
 
-  const preferredHeaders = ["Phone Numbers", "Source Sheet"];
+const preferredHeaders = ["Phone Numbers", "Source File", "Source Sheet"];
 
   return [
     ...preferredHeaders.filter((header) => headers.includes(header)),
@@ -1754,4 +1812,225 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+
+function loadOrganizerCategories() {
+  try {
+    const stored = localStorage.getItem(ORGANIZER_KEYWORDS_STORAGE_KEY);
+
+    if (!stored) {
+      return structuredClone(DEFAULT_ORGANIZER_CATEGORIES);
+    }
+
+    const parsed = JSON.parse(stored);
+
+    if (!Array.isArray(parsed)) {
+      return structuredClone(DEFAULT_ORGANIZER_CATEGORIES);
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error("Could not load organizer keywords:", error);
+    return structuredClone(DEFAULT_ORGANIZER_CATEGORIES);
+  }
+}
+
+function saveOrganizerCategories() {
+  localStorage.setItem(
+    ORGANIZER_KEYWORDS_STORAGE_KEY,
+    JSON.stringify(organizerCategories)
+  );
+}
+
+function renderOrganizerKeywords() {
+  const container = document.getElementById("organizerKeywordsContainer");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  organizerCategories.forEach((category, categoryIndex) => {
+    const card = document.createElement("div");
+    card.className = "file-fixer-keyword-category-card";
+
+const titleRow = document.createElement("div");
+titleRow.className = "file-fixer-keyword-title-row";
+
+const title = document.createElement("h3");
+title.textContent = category.sheetName;
+
+const titleActions = document.createElement("div");
+titleActions.className = "file-fixer-keyword-title-actions";
+
+const editSheetBtn = document.createElement("button");
+editSheetBtn.type = "button";
+editSheetBtn.textContent = "Edit Title";
+editSheetBtn.addEventListener("click", () => {
+  const newSheetName = prompt("Edit sheet title:", category.sheetName);
+  const cleanSheetName = normalizeValue(newSheetName);
+
+  if (!cleanSheetName) return;
+
+  const alreadyExists = organizerCategories.some(
+    (item, index) =>
+      index !== categoryIndex &&
+      item.sheetName.toLowerCase() === cleanSheetName.toLowerCase()
+  );
+
+  if (alreadyExists) {
+    alert("This sheet title already exists.");
+    return;
+  }
+
+  category.sheetName = cleanSheetName;
+  saveOrganizerCategories();
+  renderOrganizerKeywords();
+});
+
+const deleteSheetBtn = document.createElement("button");
+deleteSheetBtn.type = "button";
+deleteSheetBtn.textContent = "Delete Sheet";
+deleteSheetBtn.addEventListener("click", () => {
+  const confirmed = confirm(
+    `Delete the sheet "${category.sheetName}" and all its keywords?`
+  );
+
+  if (!confirmed) return;
+
+  organizerCategories.splice(categoryIndex, 1);
+  saveOrganizerCategories();
+  renderOrganizerKeywords();
+});
+
+titleActions.appendChild(editSheetBtn);
+titleActions.appendChild(deleteSheetBtn);
+
+titleRow.appendChild(title);
+titleRow.appendChild(titleActions);
+
+    const keywordList = document.createElement("div");
+    keywordList.className = "file-fixer-keyword-list";
+
+    category.keywords.forEach((keyword, keywordIndex) => {
+      const chip = document.createElement("div");
+      chip.className = "file-fixer-keyword-chip";
+
+      const text = document.createElement("span");
+      text.textContent = keyword;
+
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", () => {
+        const newKeyword = prompt("Edit keyword:", keyword);
+        if (!newKeyword) return;
+
+        category.keywords[keywordIndex] = newKeyword.trim();
+        saveOrganizerCategories();
+        renderOrganizerKeywords();
+      });
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.textContent = "✕";
+      deleteBtn.addEventListener("click", () => {
+        const confirmed = confirm(`Delete keyword "${keyword}"?`);
+        if (!confirmed) return;
+
+        category.keywords.splice(keywordIndex, 1);
+        saveOrganizerCategories();
+        renderOrganizerKeywords();
+      });
+
+      chip.appendChild(text);
+      chip.appendChild(editBtn);
+      chip.appendChild(deleteBtn);
+
+      keywordList.appendChild(chip);
+    });
+
+    const addRow = document.createElement("div");
+    addRow.className = "file-fixer-keyword-add-row";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = `Add keyword to ${category.sheetName}`;
+
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.textContent = "Add";
+
+    addBtn.addEventListener("click", () => {
+      const newKeyword = normalizeValue(input.value);
+
+      if (!newKeyword) return;
+
+      const exists = category.keywords.some(
+        (keyword) => keyword.toLowerCase() === newKeyword.toLowerCase()
+      );
+
+      if (exists) {
+        alert("This keyword already exists in this category.");
+        return;
+      }
+
+      category.keywords.push(newKeyword);
+      input.value = "";
+
+      saveOrganizerCategories();
+      renderOrganizerKeywords();
+    });
+
+    addRow.appendChild(input);
+    addRow.appendChild(addBtn);
+
+card.appendChild(titleRow);
+    card.appendChild(keywordList);
+    card.appendChild(addRow);
+
+    container.appendChild(card);
+  });
+}
+
+function addOrganizerSheetCategory() {
+  const sheetNameInput = document.getElementById("newOrganizerSheetNameInput");
+  const keywordsInput = document.getElementById("newOrganizerSheetKeywordsInput");
+
+  const sheetName = normalizeValue(sheetNameInput?.value);
+  const keywordsText = normalizeValue(keywordsInput?.value);
+
+  if (!sheetName) {
+    alert("Please enter a sheet title.");
+    return;
+  }
+
+  if (!keywordsText) {
+    alert("Please enter at least one keyword.");
+    return;
+  }
+
+  const alreadyExists = organizerCategories.some(
+    (category) => category.sheetName.toLowerCase() === sheetName.toLowerCase()
+  );
+
+  if (alreadyExists) {
+    alert("This sheet title already exists.");
+    return;
+  }
+
+  const keywords = keywordsText
+    .split(",")
+    .map((keyword) => normalizeValue(keyword))
+    .filter(Boolean);
+
+  organizerCategories.push({
+    sheetName,
+    keywords,
+  });
+
+  saveOrganizerCategories();
+  renderOrganizerKeywords();
+
+  sheetNameInput.value = "";
+  keywordsInput.value = "";
 }
