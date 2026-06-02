@@ -911,39 +911,51 @@ let valueWithoutPhones = shouldExtractPhoneFromThisColumn
   };
 }
 
+
 function isLikelyPhoneColumn(index, value) {
   const text = normalizeValue(value);
-
   if (!text) return false;
 
-  /*
-    In the original file:
-    A = company name
-    B = category
-    C = description/type
-    D = responsible person, example: Louna
-    E/F = contact names, sometimes with personal notes/numbers
-    G/H = real phone columns
-
-    So we only extract phone numbers from columns G and H first.
-  */
-  return index === 6 || index === 7;
+  return extractPhonesFromText(text).length > 0;
 }
 
 function pickName(values, remainingText) {
-  const firstValue = normalizeValue(values[0]);
+  const cleanValues = values
+    .map(normalizeValue)
+    .filter(Boolean)
+    .filter((value) => !isBadNameCandidate(value));
 
-  if (
-    firstValue &&
-    !isPhoneLike(firstValue) &&
-    !isEmail(firstValue) &&
-    !isWebsite(firstValue)
-  ) {
-    return firstValue;
-  }
-
-  return remainingText[0] || "";
+  return cleanValues[0] || "";
 }
+
+
+function isBadNameCandidate(value) {
+  const text = normalizeValue(value);
+  const lowerText = text.toLowerCase();
+
+  if (!text) return true;
+
+  if (isPhoneLike(text)) return true;
+  if (isEmail(text)) return true;
+  if (isWebsite(text)) return true;
+
+  if (/^\d+$/.test(text)) return true;
+  if (/^[\d\s+\-./()]+$/.test(text)) return true;
+
+  const badWords = [
+    "pending",
+    "free",
+    "corner",
+    "no tent",
+    "kids",
+    "kids part",
+    "reservations vendors",
+    "boom club",
+  ];
+
+  return badWords.includes(lowerText);
+}
+
 
 function pickLocation(remainingText, originalValues) {
   const originalLocation = normalizeValue(originalValues[7]);
@@ -992,6 +1004,7 @@ function pickLocation(remainingText, originalValues) {
 function buildDescription(remainingText, name, location) {
   return remainingText
     .filter((value) => value !== name && value !== location)
+    .filter((value) => !isPhoneLike(value))
     .join(" | ");
 }
 
@@ -1514,9 +1527,17 @@ function organizeWorkbookByKeywords(workbook) {
 
     if (matrix.length === 0) return;
 
-    const headers = matrix[0].map((header, index) =>
-      normalizeValue(header) || `Column ${index + 1}`
-    );
+const headers = matrix[0].map((header, index) => {
+  const cleanHeader = normalizeValue(header);
+
+  if (!cleanHeader) return `Column ${index + 1}`;
+
+  if (extractPhonesFromText(cleanHeader).length > 0) {
+    return `Column ${index + 1}`;
+  }
+
+  return cleanHeader;
+});
 
     const dataRows = matrix.slice(1);
 
@@ -1631,7 +1652,12 @@ function collectOrganizerHeaders(rows) {
     });
   });
 
-  return headers;
+  const preferredHeaders = ["Phone Numbers", "Source Sheet"];
+
+  return [
+    ...preferredHeaders.filter((header) => headers.includes(header)),
+    ...headers.filter((header) => !preferredHeaders.includes(header)),
+  ];
 }
 
 function createOrganizerSheet(rows, headers) {
