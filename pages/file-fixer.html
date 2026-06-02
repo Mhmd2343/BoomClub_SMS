@@ -74,7 +74,7 @@
           Upload one messy Excel file (.xlsx only)
         </label>
 
-        <input type="file" id="organizeFilterInput" accept=".xlsx" />
+<input type="file" id="organizeFilterInput" accept=".xlsx" multiple />
 
         <div id="organizeFilterSelectedFile" class="file-fixer-selected-file"></div>
 
@@ -83,6 +83,12 @@
         <button id="processOrganizeFilterBtn" type="button">
           Organize and Filter File
         </button>
+
+        <button id="clearOrganizeFilterBtn" type="button" class="file-fixer-clear-btn">
+  Clear Files
+</button>
+
+
       </div>
     </div>
 

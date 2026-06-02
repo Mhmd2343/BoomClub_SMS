@@ -26,8 +26,7 @@ const FILE_FIXER_MAIN_MODE_FIX = "fix";
 const FILE_FIXER_MAIN_MODE_ORGANIZE = "organize";
 
 let selectedFileFixerMainMode = "";
-let selectedOrganizeFilterFile = null;
-
+let selectedOrganizeFilterFiles = [];
 
 export function initFileFixerPage() {
   const fileInput = document.getElementById("fileFixerInput");
@@ -37,6 +36,7 @@ export function initFileFixerPage() {
 const organizeFilterModeBtn = document.getElementById("organizeFilterModeBtn");
 const organizeFilterInput = document.getElementById("organizeFilterInput");
 const processOrganizeFilterBtn = document.getElementById("processOrganizeFilterBtn");
+const clearOrganizeFilterBtn = document.getElementById("clearOrganizeFilterBtn");
 const fileFixerBackBtn = document.getElementById("fileFixerBackBtn");
 const organizeFilterBackBtn = document.getElementById("organizeFilterBackBtn");
 
@@ -62,6 +62,7 @@ organizeFilterModeBtn?.addEventListener("click", () => {
 
 organizeFilterInput?.addEventListener("change", handleOrganizeFilterFileSelection);
 processOrganizeFilterBtn?.addEventListener("click", handleProcessOrganizeFilterFile);
+clearOrganizeFilterBtn?.addEventListener("click", clearOrganizeFilterFiles);
 fileFixerBackBtn?.addEventListener("click", () => {
   selectedFileFixerMainMode = "";
   updateMainFileFixerMode();
@@ -149,19 +150,105 @@ function updateMainFileFixerMode() {
 }
 
 function handleOrganizeFilterFileSelection(event) {
-  const file = event.target.files?.[0];
+  const incomingFiles = Array.from(event.target.files || []);
 
-  selectedOrganizeFilterFile = file || null;
+  incomingFiles.forEach((file) => {
+    const alreadyExists = selectedOrganizeFilterFiles.some(
+      (existingFile) =>
+        existingFile.name === file.name &&
+        existingFile.size === file.size &&
+        existingFile.lastModified === file.lastModified
+    );
 
-  const selectedFileEl = document.getElementById("organizeFilterSelectedFile");
-  if (selectedFileEl) {
-    selectedFileEl.innerHTML = file
-      ? `<strong>Selected file:</strong> ${escapeHtml(file.name)}`
-      : "";
-  }
+    if (!alreadyExists) {
+      selectedOrganizeFilterFiles.push(file);
+    }
+  });
 
+  event.target.value = "";
+
+  renderSelectedOrganizeFilterFiles();
   clearOrganizeFilterError();
   clearFileFixerReport();
+}
+
+function renderSelectedOrganizeFilterFiles() {
+  const selectedFileEl = document.getElementById("organizeFilterSelectedFile");
+  if (!selectedFileEl) return;
+
+  selectedFileEl.innerHTML = "";
+
+  if (selectedOrganizeFilterFiles.length === 0) {
+    return;
+  }
+
+  const listWrapper = document.createElement("div");
+  listWrapper.className = "file-fixer-selected-files-list";
+
+  selectedOrganizeFilterFiles.forEach((file, index) => {
+    const row = document.createElement("div");
+    row.className = "file-fixer-file-pill";
+
+    const leftSide = document.createElement("div");
+    leftSide.className = "file-fixer-file-pill-left";
+
+    const label = document.createElement("strong");
+    label.textContent = `Selected file ${index + 1}: `;
+
+    const fileName = document.createElement("span");
+    fileName.textContent = file.name;
+    fileName.className = "file-fixer-file-name";
+    fileName.title = "Click to preview this file";
+    fileName.addEventListener("click", async () => {
+      try {
+        await openFilePreview(file);
+      } catch (error) {
+        console.error("Preview failed:", error);
+      }
+    });
+
+    leftSide.appendChild(label);
+    leftSide.appendChild(fileName);
+
+    const rightSide = document.createElement("div");
+    rightSide.className = "file-fixer-file-pill-actions";
+
+    const previewBtn = document.createElement("button");
+    previewBtn.type = "button";
+    previewBtn.className = "file-fixer-small-action-btn";
+    previewBtn.textContent = "Preview";
+    previewBtn.addEventListener("click", async () => {
+      try {
+        await openFilePreview(file);
+      } catch (error) {
+        console.error("Preview failed:", error);
+      }
+    });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "file-fixer-small-remove-btn";
+    removeBtn.textContent = "✕";
+    removeBtn.title = "Remove file";
+    removeBtn.addEventListener("click", () => {
+      selectedOrganizeFilterFiles = selectedOrganizeFilterFiles.filter(
+        (_, fileIndex) => fileIndex !== index
+      );
+
+      renderSelectedOrganizeFilterFiles();
+      clearOrganizeFilterError();
+      clearFileFixerReport();
+    });
+
+    rightSide.appendChild(previewBtn);
+    rightSide.appendChild(removeBtn);
+
+    row.appendChild(leftSide);
+    row.appendChild(rightSide);
+    listWrapper.appendChild(row);
+  });
+
+  selectedFileEl.appendChild(listWrapper);
 }
 
 function clearOrganizeFilterError() {
@@ -184,26 +271,32 @@ async function handleProcessOrganizeFilterFile() {
   clearOrganizeFilterError();
   clearFileFixerReport();
 
-  if (!selectedOrganizeFilterFile) {
-    showOrganizeFilterError("Please upload one .xlsx file first.");
+  if (selectedOrganizeFilterFiles.length === 0) {
+    showOrganizeFilterError("Please upload at least one .xlsx file first.");
     return;
   }
 
-  if (!selectedOrganizeFilterFile.name.toLowerCase().endsWith(".xlsx")) {
+  const invalidFiles = selectedOrganizeFilterFiles.filter(
+    (file) => !file.name.toLowerCase().endsWith(".xlsx")
+  );
+
+  if (invalidFiles.length > 0) {
     showOrganizeFilterError("Only .xlsx files are allowed.");
     return;
   }
 
   try {
-    const fileData = await readFileAsArrayBuffer(selectedOrganizeFilterFile);
-    const workbook = XLSX.read(fileData, { type: "array" });
+    for (const file of selectedOrganizeFilterFiles) {
+      const fileData = await readFileAsArrayBuffer(file);
+      const workbook = XLSX.read(fileData, { type: "array" });
 
-    const organizedWorkbook = organizeWorkbookByKeywords(workbook);
+      const organizedWorkbook = organizeWorkbookByKeywords(workbook);
 
-    downloadWorkbook(
-      organizedWorkbook,
-      buildOrganizedFileName(selectedOrganizeFilterFile.name)
-    );
+      downloadWorkbook(
+        organizedWorkbook,
+        buildOrganizedFileName(file.name)
+      );
+    }
   } catch (error) {
     console.error("Organizer failed:", error);
     showOrganizeFilterError(
@@ -990,6 +1083,22 @@ function clearFileFixerError() {
   errorEl.classList.remove("show");
 }
 
+function clearOrganizeFilterFiles() {
+  const confirmed = confirm("Are you sure you want to clear all selected organizer files?");
+  if (!confirmed) return;
+
+  selectedOrganizeFilterFiles = [];
+
+  const organizeFilterInput = document.getElementById("organizeFilterInput");
+  if (organizeFilterInput) {
+    organizeFilterInput.value = "";
+  }
+
+  renderSelectedOrganizeFilterFiles();
+  clearOrganizeFilterError();
+  clearFileFixerReport();
+}
+
 function showFileFixerError(message) {
   const errorEl = document.getElementById("fileFixerErrorLabel");
   if (!errorEl) return;
@@ -1326,6 +1435,7 @@ const ORGANIZER_CATEGORIES = [
   { sheetName: "Client", keywords: ["client", "old client", "old clients"] },
   { sheetName: "Ucmas", keywords: ["ucmas"] },
   { sheetName: "Acmas", keywords: ["acmas"] },
+  { sheetName: "Kids Part", keywords: ["kids part", "kid part"] },
   { sheetName: "Colonie", keywords: ["colonie", "colony"] },
   { sheetName: "Event", keywords: ["event", "events"] },
   { sheetName: "Entertainment", keywords: ["entertainment"] },
@@ -1340,23 +1450,23 @@ const ORGANIZER_CATEGORIES = [
   { sheetName: "Birthday", keywords: ["birthday", "anniversaire"] },
   { sheetName: "Festival", keywords: ["festival"] },
   { sheetName: "Family", keywords: ["pere", "père", "mere", "mère", "soeur", "sister", "father", "mother"] },
-  { sheetName: "Schools", keywords: ["ecole", "école", "school", "schools", "sabis", "eastwood", "sagesse", "abts", "st "] },
-  { sheetName: "Municipality", keywords: ["municipality", "municipalities", "mun.", "municipal"] },
+  { sheetName: "Schools", keywords: ["ecole", "école", "school", "schools", "sabis", "eastwood", "sagesse", "abts"] },
+  { sheetName: "Municipality", keywords: ["municipality", "municipalities", "municipal"] },
   { sheetName: "Playground", keywords: ["playground"] },
-  { sheetName: "PR", keywords: ["pr"] },
-  { sheetName: "Mme", keywords: ["mme", "madame", "à mme", "c mme"] },
-  { sheetName: "Mr", keywords: ["mr", "monsieur", "à mr"] },
-  { sheetName: "UN", keywords: ["un", "united nations"] },
+  { sheetName: "PR", keywords: ["public relations", "press relations"] },
+  { sheetName: "Mme", keywords: ["mme", "madame"] },
+  { sheetName: "Mr", keywords: ["monsieur"] },
+  { sheetName: "UN", keywords: ["united nations"] },
   { sheetName: "Mouvement", keywords: ["mouvement", "movement"] },
   { sheetName: "Charite", keywords: ["charite", "charity", "charité"] },
   { sheetName: "Marketing", keywords: ["marketing"] },
-  { sheetName: "DJ Music", keywords: ["dj", "music", "musique"] },
+  { sheetName: "DJ Music", keywords: ["dj music", "music", "musique"] },
   { sheetName: "Equipment", keywords: ["equipment", "materiel", "matériel"] },
   { sheetName: "Immeuble Office", keywords: ["immeuble", "office", "bureau"] },
   { sheetName: "Inflatables", keywords: ["inflatable", "inflatables", "gonflable"] },
   { sheetName: "Lions", keywords: ["lions"] },
   { sheetName: "Mecanicien", keywords: ["mecanicien", "mécanicien", "mechanic"] },
-  { sheetName: "Trip Adventure Rappel", keywords: ["trip", "sorti", "sortie", "adventure", "rappel"] },
+  { sheetName: "Trip Adventure Rappel", keywords: ["trip", "sortie", "adventure", "rappel"] },
   { sheetName: "Elio", keywords: ["elio"] },
   { sheetName: "Kfarnabrakh", keywords: ["kfarnabrakh"] },
   { sheetName: "Army", keywords: ["lieutenant", "commandant", "colonel", "army", "armee", "armée"] },
@@ -1365,7 +1475,6 @@ const ORGANIZER_CATEGORIES = [
   { sheetName: "Character", keywords: ["character", "personnage"] },
   { sheetName: "Khayyat", keywords: ["khayyat"] },
   { sheetName: "Shows", keywords: ["show", "dog", "juggler", "breakdance", "stilts", "dancer", "danse"] },
-  { sheetName: "CV", keywords: ["cv"] },
   { sheetName: "Scout", keywords: ["scout"] },
   { sheetName: "Assistant", keywords: ["assistant"] },
   { sheetName: "Decoration", keywords: ["decoration", "décoration"] },
@@ -1374,22 +1483,12 @@ const ORGANIZER_CATEGORIES = [
   { sheetName: "Storium", keywords: ["storium"] },
   { sheetName: "Mall", keywords: ["mall"] },
   { sheetName: "Dance", keywords: ["dance", "danse"] },
-  { sheetName: "Food Stands", keywords: ["pop corn", "popcorn", "cotton candy", "ice cream"] },
+  { sheetName: "Food Stands", keywords: ["food stand", "food stands", "pop corn", "popcorn", "cotton candy", "ice cream"] },
   { sheetName: "Kermes", keywords: ["kermes", "kermesse"] },
   { sheetName: "Bank", keywords: ["bank", "banque"] },
   { sheetName: "TV Show", keywords: ["tv show", "television", "télévision"] },
-  { sheetName: "January", keywords: ["january", "janvier", "jan"] },
-  { sheetName: "February", keywords: ["february", "fevrier", "février", "fev", "fév"] },
-  { sheetName: "March", keywords: ["march", "mars", "mar"] },
-  { sheetName: "April", keywords: ["april", "avril", "apr"] },
-  { sheetName: "May", keywords: ["may", "mai"] },
-  { sheetName: "June", keywords: ["june", "juin", "jun"] },
-  { sheetName: "July", keywords: ["july", "juillet", "jul"] },
-  { sheetName: "August", keywords: ["august", "aout", "août", "aug"] },
-  { sheetName: "September", keywords: ["september", "septembre", "sep", "sept"] },
-  { sheetName: "October", keywords: ["october", "octobre", "oct"] },
-  { sheetName: "November", keywords: ["november", "novembre", "nov"] },
-  { sheetName: "December", keywords: ["december", "decembre", "décembre", "dec", "déc"] },
+  { sheetName: "March", keywords: ["march", "mars"] },
+  { sheetName: "August", keywords: ["august", "aout", "août"] },
 ];
 
 function organizeWorkbookByKeywords(workbook) {
@@ -1423,15 +1522,28 @@ function organizeWorkbookByKeywords(workbook) {
 
     dataRows.forEach((row) => {
       if (isRowEmpty(row)) return;
+const normalizedRow = {};
+const phoneNumbers = [];
 
-      const normalizedRow = {};
-      headers.forEach((header, index) => {
-        normalizedRow[header] = row[index] ?? "";
-      });
+headers.forEach((header, index) => {
+  const value = row[index] ?? "";
+  const phones = extractPhonesFromText(value);
 
-      normalizedRow["Source Sheet"] = sheetName;
+  if (phones.length > 0) {
+    phones.forEach((phone) => {
+      addUniquePhone(phoneNumbers, phone);
+    });
 
-      const matchedCategories = findMatchingOrganizerCategories(row);
+    normalizedRow[header] = removeExtractedPhonesFromText(value, phones);
+  } else {
+    normalizedRow[header] = value;
+  }
+});
+
+normalizedRow["Phone Numbers"] = phoneNumbers.join(" | ");
+normalizedRow["Source Sheet"] = sheetName;
+
+const matchedCategories = findMatchingOrganizerCategories(row, sheetName);
 
       if (matchedCategories.length === 0) {
         groupedRows.get("Uncategorized").push(normalizedRow);
@@ -1460,13 +1572,15 @@ function organizeWorkbookByKeywords(workbook) {
   return organizedWorkbook;
 }
 
-function findMatchingOrganizerCategories(row) {
-  const rowText = normalizeForKeywordSearch(row.join(" "));
+function findMatchingOrganizerCategories(row, sourceSheetName = "") {
+  const rowText = normalizeForKeywordSearch(`${sourceSheetName} ${row.join(" ")}`);
   const matches = [];
 
   ORGANIZER_CATEGORIES.forEach((category) => {
     const hasMatch = category.keywords.some((keyword) => {
       const normalizedKeyword = normalizeForKeywordSearch(keyword);
+      if (!normalizedKeyword) return false;
+
       return rowText.includes(normalizedKeyword);
     });
 
@@ -1477,6 +1591,24 @@ function findMatchingOrganizerCategories(row) {
 
   return [...new Set(matches)];
 }
+
+
+function containsExactPhrase(rowWords, keywordWords) {
+  if (keywordWords.length === 0) return false;
+
+  for (let i = 0; i <= rowWords.length - keywordWords.length; i++) {
+    const isMatch = keywordWords.every(
+      (keywordWord, index) => rowWords[i + index] === keywordWord
+    );
+
+    if (isMatch) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 
 function normalizeForKeywordSearch(value) {
   return normalizeValue(value)
