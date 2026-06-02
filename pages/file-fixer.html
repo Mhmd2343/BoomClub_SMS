@@ -9,20 +9,29 @@
       </div>
     </div>
 
-    <div class="file-fixer-main-mode-grid">
-      <button id="fixMessedFileModeBtn" type="button" class="file-fixer-main-mode-card active">
-        <strong>Fix Messed Up File</strong>
-        <small>Clean messy company files using the current File Fixer system.</small>
-      </button>
+<div id="fileFixerMainChooser" class="file-fixer-main-mode-grid"> 
+<button id="fixMessedFileModeBtn" type="button" class="file-fixer-main-mode-card">
+      <span class="file-fixer-main-mode-icon">🛠️</span>
+    <strong>Fix Messed Up Files</strong>
+    <small>
+      Clean messy Excel files, detect phone numbers, emails, websites, and generate a fixed workbook.
+    </small>
+  </button>
 
-      <button id="organizeFilterModeBtn" type="button" class="file-fixer-main-mode-card">
-        <strong>Organize and Filter Messed Up File</strong>
-        <small>Classify every row into different sheets based on keywords.</small>
-      </button>
-    </div>
+  <button id="organizeFilterModeBtn" type="button" class="file-fixer-main-mode-card">
+    <span class="file-fixer-main-mode-icon">📂</span>
+    <strong>Organize Messed Up Files</strong>
+    <small>
+      Organize rows into keyword-based sheets such as clients, schools, events, suppliers, and more.
+    </small>
+  </button>
+</div>
 
-    <div id="fixMessedFileSection">
-      <div class="file-fixer-mode-grid">
+<div id="fixMessedFileSection" class="file-fixer-hidden">
+  <button id="fileFixerBackBtn" type="button" class="file-fixer-back-btn">
+  ← Back
+</button>
+        <div class="file-fixer-mode-grid">
         <button id="sameSheetsModeBtn" type="button" class="file-fixer-mode-card active">
           <strong>Same number of sheets</strong>
           <small>Keep the workbook sheets separated like the original file.</small>
@@ -48,10 +57,18 @@
         <button id="processFileFixerBtn" type="button">
           Process File
         </button>
+
+        <button id="clearFileFixerBtn" type="button" class="file-fixer-clear-btn">
+  Clear Files
+</button>
+
       </div>
     </div>
 
     <div id="organizeFilterSection" class="file-fixer-hidden">
+      <button id="organizeFilterBackBtn" type="button" class="file-fixer-back-btn">
+  ← Back
+</button>
       <div class="file-fixer-upload-box">
         <label class="file-fixer-label" for="organizeFilterInput">
           Upload one messy Excel file (.xlsx only)
