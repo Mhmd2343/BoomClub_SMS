@@ -277,11 +277,11 @@ async function handleProcessOrganizeFilterFile() {
   }
 
   const invalidFiles = selectedOrganizeFilterFiles.filter(
-    (file) => !file.name.toLowerCase().endsWith(".xlsx")
+(file) => !isSupportedSpreadsheetFile(file.name)
   );
 
   if (invalidFiles.length > 0) {
-    showOrganizeFilterError("Only .xlsx files are allowed.");
+    showOrganizeFilterError("Only Excel or CSV files are allowed.");
     return;
   }
 
@@ -467,7 +467,7 @@ async function handleProcessFileFixerFiles() {
   }
 
   const invalidExtensionFiles = selectedFileFixerFiles.filter(
-    (file) => !file.name.toLowerCase().endsWith(".xlsx")
+(file) => !isSupportedSpreadsheetFile(file.name)
   );
 
   if (invalidExtensionFiles.length > 0) {
@@ -475,7 +475,7 @@ async function handleProcessFileFixerFiles() {
       buildErrorListHtml(
         invalidExtensionFiles.map(
           (file) =>
-            `File "<strong>${escapeHtml(file.name)}</strong>" is invalid because only .xlsx files are allowed.`
+            `File "<strong>${escapeHtml(file.name)}</strong>" is invalid because only Excel or CSV files are allowed..`
         )
       )
     );
@@ -1195,6 +1195,12 @@ function buildFixedFileName(fileName) {
 
   return `${cleanName}_FIXED.xlsx`;
 }
+
+function isSupportedSpreadsheetFile(fileName) {
+  return /\.(xlsx|xls|xlsm|csv)$/i.test(String(fileName || ""));
+}
+
+
 
 function downloadWorkbook(workbook, fileName) {
   XLSX.writeFile(workbook, fileName);
